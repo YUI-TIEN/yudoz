@@ -22,13 +22,15 @@ type Progress = {
   /** 답장을 기다리는 방과 분기들 (action id 포함) */
   pendingReply: { actionId: string; room: string; branches: ReplyBranch[] } | null
   seq: number
-  calls: { at: string; contactId: string; type: 'incoming' | 'missed'; seconds: number }[]
+  calls: { at: string; contactId: string; type: 'incoming' | 'outgoing' | 'missed'; seconds: number }[]
+  /** 알림 센터·잠금화면에 쌓이는 알림 */
+  notices: (Banner & { at: string })[]
 }
 
 const GAP = 1400
 
 function initial(story: PhoneStory): Progress {
-  return { fired: [], done: [], added: [], readIds: [], readRooms: [], clock: story.startAt, pendingReply: null, seq: 1, calls: [] }
+  return { fired: [], done: [], added: [], readIds: [], readRooms: [], clock: story.startAt, pendingReply: null, seq: 1, calls: [], notices: [] }
 }
 
 function load(story: PhoneStory): Progress {
@@ -55,6 +57,8 @@ type Ctx = {
   screen: Screen
   setScreen: (s: Screen) => void
   unlock: () => void
+  /** 잠금 상태에서 알림을 누르면 암호 입력 뒤 그 방으로 간다 */
+  queueRoom: (id: string) => void
   clock: string
   rooms: (Room & { live: LiveMsg[] })[]
   unreadByRoom: Record<string, number>
@@ -70,6 +74,9 @@ type Ctx = {
   declineCall: () => void
   finishCall: (seconds: number) => void
   extraCalls: Progress['calls']
+  addCall: (contactId: string, type: 'outgoing' | 'missed', seconds: number) => void
+  notices: Progress['notices']
+  clearNotices: () => void
   restart: () => void
 }
 
@@ -86,6 +93,7 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
   view.current = { screen, openRoom }
   const timers = useRef<number[]>([])
   const running = useRef(new Set<string>())
+  const pendingRoom = useRef<string | null>(null)
 
   const commit = useCallback((next: Progress) => {
     ref.current = next
@@ -137,12 +145,15 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
       commit({ ...p, seq: p.seq + 1, added: [...p.added, msg], readIds: viewing ? [...p.readIds, id] : p.readIds })
       playPing()
       if (!viewing) {
-        setBanner({
+        const b: Banner = {
           key: id,
           room,
           sender: roomSender(room, from),
           text: 'text' in content ? content.text : { ko: '이모티콘을 보냈습니다.', zh: '傳送了貼圖。' },
-        })
+        }
+        setBanner(b)
+        ref.current = { ...ref.current, notices: [...ref.current.notices, { ...b, at: ref.current.clock }] }
+        setProgress(ref.current)
       }
     },
     [commit, roomSender],
@@ -238,7 +249,9 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
     const p = ref.current
     const ids = p.added.filter((m) => m.room === id && m.from !== 'me' && !p.readIds.includes(m.id)).map((m) => m.id)
     const staticUnread = story.rooms.find((r) => r.id === id)?.unread && !p.readRooms.includes(id)
-    if (ids.length || staticUnread) commit({ ...p, readIds: [...p.readIds, ...ids], readRooms: staticUnread ? [...p.readRooms, id] : p.readRooms })
+    const notices = p.notices.filter((n) => n.room !== id)
+    if (ids.length || staticUnread || notices.length !== p.notices.length)
+      commit({ ...p, notices, readIds: [...p.readIds, ...ids], readRooms: staticUnread ? [...p.readRooms, id] : p.readRooms })
     emit(`open:${id}`)
   }
 
@@ -321,8 +334,14 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
       setScreen(s)
     },
     unlock: () => {
-      setScreen({ kind: 'home' })
+      const room = pendingRoom.current
+      pendingRoom.current = null
+      setScreen(room ? { kind: 'app', app: 'kakao' } : { kind: 'home' })
       emit('unlock')
+      if (room) window.setTimeout(() => setOpenRoom(room), 0)
+    },
+    queueRoom: (id) => {
+      pendingRoom.current = id
     },
     clock: progress.clock,
     rooms,
@@ -339,6 +358,12 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
     declineCall: () => finishCallAction('missed', 0),
     finishCall: (seconds) => finishCallAction('incoming', seconds),
     extraCalls: progress.calls,
+    addCall: (contactId, type, seconds) => {
+      const p = ref.current
+      commit({ ...p, calls: [...p.calls, { at: p.clock, contactId, type, seconds }] })
+    },
+    notices: progress.notices,
+    clearNotices: () => commit({ ...ref.current, notices: [] }),
     restart: () => {
       timers.current.forEach((t) => window.clearTimeout(t))
       timers.current = []

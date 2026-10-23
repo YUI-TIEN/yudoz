@@ -1,212 +1,381 @@
-import { useState } from 'react'
-import { useLang, UI, type L } from '../../i18n'
-import { duration, fullDate, listDate, monthDay, ms, time } from '../../time'
+import { useEffect, useRef, useState } from 'react'
+import { useLang, UI } from '../../i18n'
+import { duration, fullDate, listDate, monthDay, ms, time, pad } from '../../time'
 import { useStory } from '../../story/engine'
-import type { CallLog } from '../../story/types'
-import { Avatar, HomeBar, NavHeader, PhotoTile, StatusBar } from '../common'
-
-function Shell({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={`ios ${className}`}>
-      <StatusBar />
-      {children}
-      <HomeBar />
-    </div>
-  )
-}
-
-const firstLine = (s: string) => s.split('\n').find((l) => l.trim()) ?? ''
-
-/* ---------------- 메시지(SMS) ---------------- */
-export function MessagesApp() {
-  const { story, clock } = useStory()
-  const { t, lang } = useLang()
-  const [open, setOpen] = useState<string | null>(null)
-  const thread = story.sms.find((s) => s.id === open)
-  if (thread)
-    return (
-      <Shell className="sms">
-        <NavHeader title={thread.from} onBack={() => setOpen(null)} backLabel={UI.messages} />
-        <div className="sms-body">
-          {thread.messages.map((m, i) => (
-            <div key={i}>
-              {(i === 0 || !sameMinute(thread.messages[i - 1].at, m.at)) && <div className="sms-stamp">{`${monthDay(m.at, lang)} ${time(m.at, lang)}`}</div>}
-              <div className={`sms-msg ${m.me ? 'me' : ''}`}>{t(m.text)}</div>
-            </div>
-          ))}
-        </div>
-      </Shell>
-    )
-  return (
-    <Shell>
-      <NavHeader title={UI.messages} large />
-      <div className="list">
-        {[...story.sms]
-          .sort((a, b) => ms(b.messages[b.messages.length - 1].at) - ms(a.messages[a.messages.length - 1].at))
-          .map((s) => {
-            const last = s.messages[s.messages.length - 1]
-            return (
-              <button key={s.id} className="row" onClick={() => setOpen(s.id)}>
-                <Avatar size={42} radius={21} />
-                <span className="row-mid">
-                  <b>{t(s.from)}</b>
-                  <small className="clamp2">{t(last.text).replace(/\n/g, ' ')}</small>
-                </span>
-                <small className="row-date">{listDate(last.at, clock, lang)}</small>
-              </button>
-            )
-          })}
-      </div>
-    </Shell>
-  )
-}
-
-const sameMinute = (a: string, b: string) => Math.abs(ms(a) - ms(b)) < 60_000 * 30
-
-/* ---------------- 전화 ---------------- */
-export function PhoneApp() {
-  const { story, extraCalls, clock } = useStory()
-  const { t, lang } = useLang()
-  const all: CallLog[] = [...story.calls, ...extraCalls].sort((a, b) => ms(b.at) - ms(a.at))
-  const label: Record<CallLog['type'], L> = { incoming: UI.incoming, outgoing: UI.outgoing, missed: UI.missed }
-  return (
-    <Shell>
-      <NavHeader title={UI.recents} large />
-      <div className="list">
-        {all.map((c, i) => {
-          const who = story.contacts[c.contactId]
-          return (
-            <div key={i} className="row">
-              <span className="call-kind">{c.type === 'outgoing' ? '↗︎' : ''}</span>
-              <span className="row-mid">
-                <b className={c.type === 'missed' ? 'red' : ''}>{who ? t(who.name) : c.contactId}</b>
-                <small>
-                  {t(label[c.type])}
-                  {c.seconds > 0 && ` · ${duration(c.seconds, lang)}`}
-                </small>
-              </span>
-              <small className="row-date">{listDate(c.at, clock, lang)}</small>
-            </div>
-          )
-        })}
-      </div>
-    </Shell>
-  )
-}
-
-/* ---------------- 사진 ---------------- */
-export function PhotosApp() {
-  const { story } = useStory()
-  const { t, lang } = useLang()
-  const [open, setOpen] = useState<number | null>(null)
-  const list = [...story.photos].sort((a, b) => ms(a.at) - ms(b.at))
-  const p = open !== null ? list[open] : null
-  if (p)
-    return (
-      <Shell className="viewer">
-        <NavHeader title={{ ko: fullDate(p.at, 'ko'), zh: fullDate(p.at, 'zh') }} onBack={() => setOpen(null)} backLabel={UI.library} />
-        <div className="viewer-img" onClick={() => setOpen((open! + 1) % list.length)}>
-          <PhotoTile src={p.src} emoji={p.emoji} tint={p.tint} label={t(p.caption)} />
-        </div>
-        <p className="viewer-cap">
-          {t(p.caption)}
-          <small>{time(p.at, lang)}</small>
-        </p>
-      </Shell>
-    )
-  return (
-    <Shell>
-      <NavHeader title={UI.library} large />
-      <div className="photo-grid">
-        {list.map((ph, i) => (
-          <button key={ph.id} onClick={() => setOpen(i)}>
-            <PhotoTile src={ph.src} emoji={ph.emoji} tint={ph.tint} label={t(ph.caption)} />
-          </button>
-        ))}
-      </div>
-    </Shell>
-  )
-}
+import { useBackHandler } from '../../device'
+import { Page } from '../common'
+import { StatusBar, WD, kstParts } from '../system'
+import { G } from '../icons'
 
 /* ---------------- 메모 ---------------- */
 export function NotesApp() {
   const { story, clock } = useStory()
   const { t, lang } = useLang()
+  const [inFolder, setInFolder] = useState(true)
   const [open, setOpen] = useState<string | null>(null)
   const note = story.notes.find((n) => n.id === open)
+  const tint = '#e5a800'
+
   if (note)
     return (
-      <Shell className="notes">
-        <NavHeader title="" onBack={() => setOpen(null)} backLabel={UI.notes} />
-        <div className="note-body">
+      <Page
+        title=""
+        onBack={() => setOpen(null)}
+        backLabel={UI.notes}
+        tint={tint}
+        bg="#fff"
+        right={
+          <>
+            <G n="share" size={21} />
+            <G n="more" size={22} />
+          </>
+        }
+        bottom={
+          <div className="n-toolbar">
+            <G n="check" size={22} />
+            <G n="camera" size={22} />
+            <G n="compose" size={22} />
+          </div>
+        }
+      >
+        <div className="n-body">
           <small>{`${fullDate(note.at, lang)} ${time(note.at, lang)}`}</small>
           <pre>{t(note.body)}</pre>
         </div>
-      </Shell>
+      </Page>
     )
-  const sorted = [...story.notes].sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || ms(b.at) - ms(a.at))
-  return (
-    <Shell className="notes">
-      <NavHeader title={UI.notes} large />
-      <div className="list card">
-        {sorted.map((n) => (
-          <button key={n.id} className="row note-row" onClick={() => setOpen(n.id)}>
-            <span className="row-mid">
-              <b>
-                {n.pinned && '📌 '}
-                {t(n.title)}
-              </b>
-              <small>
-                {listDate(n.at, clock, lang)} &nbsp;{firstLine(t(n.body).split('\n').slice(1).join('\n'))}
-              </small>
-            </span>
+
+  if (!inFolder)
+    return (
+      <Page title={{ ko: '폴더', zh: '資料夾' }} large tint={tint} right={<span className="nav-text">{t({ ko: '편집', zh: '編輯' })}</span>}>
+        <h3 className="group-h big">iCloud</h3>
+        <div className="group-box">
+          <button className="cell" onClick={() => setInFolder(true)}>
+            <G n="folder" size={22} className="tint" />
+            <span className="cell-main">{t(UI.notes)}</span>
+            <span className="cell-detail">{story.notes.length}</span>
+            <G n="chevron" size={15} w={2.6} className="cell-chev" />
           </button>
-        ))}
-      </div>
-    </Shell>
+          <div className="cell">
+            <G n="trash" size={22} className="tint" />
+            <span className="cell-main">{t({ ko: '최근 삭제된 항목', zh: '最近刪除' })}</span>
+            <span className="cell-detail">1</span>
+          </div>
+        </div>
+      </Page>
+    )
+
+  const pinned = story.notes.filter((n) => n.pinned)
+  const rest = story.notes.filter((n) => !n.pinned).sort((a, b) => ms(b.at) - ms(a.at))
+  const row = (n: (typeof story.notes)[number]) => {
+    const lines = t(n.body).split('\n').filter((l) => l.trim())
+    return (
+      <button key={n.id} className="n-row" onClick={() => setOpen(n.id)}>
+        <b>{t(n.title)}</b>
+        <small>
+          <em>{listDate(n.at, clock, lang)}</em> {lines[1] ?? ''}
+        </small>
+      </button>
+    )
+  }
+  return (
+    <Page
+      title={UI.notes}
+      large
+      onBack={() => setInFolder(false)}
+      backLabel={{ ko: '폴더', zh: '資料夾' }}
+      tint={tint}
+      search={UI.search}
+      right={<G n="more" size={22} />}
+      bottom={
+        <div className="n-toolbar">
+          <span />
+          <small>{t({ ko: `메모 ${story.notes.length}개`, zh: `${story.notes.length} 則備忘錄` })}</small>
+          <G n="compose" size={22} />
+        </div>
+      }
+    >
+      {pinned.length > 0 && (
+        <>
+          <h3 className="group-h big">
+            <G n="pin" size={14} /> {t({ ko: '고정됨', zh: '已釘選' })}
+          </h3>
+          <div className="group-box">{pinned.map(row)}</div>
+        </>
+      )}
+      <h3 className="group-h big">{t({ ko: '이전 30일', zh: '過去 30 天' })}</h3>
+      <div className="group-box">{rest.map(row)}</div>
+    </Page>
   )
 }
 
-/* ---------------- 검색 (네이버 느낌) ---------------- */
-export function SearchApp() {
-  const { story, setScreen } = useStory()
-  const { t } = useLang()
-  const [q, setQ] = useState<number | null>(null)
-  const item = q !== null ? story.searches[q] : null
+/* ---------------- 캘린더 ---------------- */
+export function CalendarApp() {
+  const { story, clock } = useStory()
+  const { t, lang } = useLang()
+  const now = kstParts(clock)
+  const [ym, setYm] = useState({ y: now.y, m: now.m })
+  const [sel, setSel] = useState(now.d)
+  const first = new Date(Date.UTC(ym.y, ym.m - 1, 1)).getUTCDay()
+  const days = new Date(Date.UTC(ym.y, ym.m, 0)).getUTCDate()
+  const key = (d: number) => `${ym.y}-${pad(ym.m)}-${pad(d)}`
+  const events = story.calendar.filter((e) => e.date === key(sel))
+  const shift = (n: number) => {
+    const d = new Date(Date.UTC(ym.y, ym.m - 1 + n, 1))
+    setYm({ y: d.getUTCFullYear(), m: d.getUTCMonth() + 1 })
+    setSel(1)
+  }
+  const isToday = (d: number) => ym.y === now.y && ym.m === now.m && d === now.d
+  const drag = useRef<number | null>(null)
   return (
-    <div className="search">
-      <StatusBar />
-      <div className="search-bar">
-        <button onClick={() => (item ? setQ(null) : setScreen({ kind: 'home' }))} aria-label={t(UI.back)}>
-          ‹
-        </button>
-        <span className="search-n">N</span>
-        <span className="search-q">{item ? t(item.q) : ''}</span>
-        <span>🔍</span>
+    <Page
+      title={lang === 'ko' ? `${ym.m}월` : `${ym.m}月`}
+      large
+      tint="#ff3b30"
+      bg="#fff"
+      right={
+        <>
+          <G n="search" size={21} />
+          <G n="plus" size={23} />
+        </>
+      }
+      bottom={
+        <div className="cal-toolbar">
+          <button
+            onClick={() => {
+              setYm({ y: now.y, m: now.m })
+              setSel(now.d)
+            }}
+          >
+            {t(UI.today)}
+          </button>
+          <span>{t({ ko: '캘린더', zh: '行事曆' })}</span>
+          <span>{t({ ko: '받은 편지함', zh: '收件匣' })}</span>
+        </div>
+      }
+    >
+      <div className="cal-year">{lang === 'ko' ? `${ym.y}년` : `${ym.y}年`}</div>
+      <div className="cal-wd">
+        {WD[lang].map((w, i) => (
+          <small key={w} className={i === 0 || i === 6 ? 'weekend' : ''}>
+            {w}
+          </small>
+        ))}
       </div>
-      {item ? (
-        <div className="search-results">
-          {item.result.map((r, i) => (
-            <div key={i} className="sr">
-              <small>blog · cafe</small>
-              <b>{t(r.title)}</b>
-              <p>{t(r.body)}</p>
+      <div
+        className="cal-month"
+        onPointerDown={(e) => (drag.current = e.clientX)}
+        onPointerUp={(e) => {
+          if (drag.current === null) return
+          const dx = e.clientX - drag.current
+          drag.current = null
+          if (dx < -50) shift(1)
+          else if (dx > 50) shift(-1)
+        }}
+      >
+        {Array.from({ length: first }).map((_, i) => (
+          <span key={`e${i}`} />
+        ))}
+        {Array.from({ length: days }).map((_, i) => {
+          const d = i + 1
+          const evs = story.calendar.filter((e) => e.date === key(d))
+          const wd = (first + i) % 7
+          return (
+            <button key={d} className={`${isToday(d) ? 'today' : ''} ${d === sel ? 'sel' : ''} ${wd === 0 || wd === 6 ? 'weekend' : ''}`} onClick={() => setSel(d)}>
+              <span>{d}</span>
+              <i>
+                {evs.slice(0, 3).map((e, j) => (
+                  <em key={j} style={{ background: e.color }} />
+                ))}
+              </i>
+            </button>
+          )
+        })}
+      </div>
+      <div className="cal-day-title">{lang === 'ko' ? `${ym.m}월 ${sel}일 ${WD.ko[(first + sel - 1) % 7]}요일` : `${ym.m}月${sel}日 星期${WD.zh[(first + sel - 1) % 7]}`}</div>
+      <div className="cal-events">
+        {events.length === 0 && <p className="muted center">{t({ ko: '이벤트 없음', zh: '沒有行程' })}</p>}
+        {events.map((e, i) => (
+          <div key={i} className="cal-ev">
+            <i style={{ background: e.color }} />
+            <span>
+              <b>{t(e.title)}</b>
+              <small>{e.time ?? t(UI.allDay)}</small>
+            </span>
+          </div>
+        ))}
+      </div>
+    </Page>
+  )
+}
+
+/* ---------------- 음성 메모 ---------------- */
+export function VoiceApp() {
+  const { story } = useStory()
+  const { t, lang } = useLang()
+  const [open, setOpen] = useState<string | null>(story.voice[0]?.id ?? null)
+  const [pos, setPos] = useState(0)
+  const [playing, setPlaying] = useState(false)
+  const memo = story.voice.find((v) => v.id === open)
+  useEffect(() => {
+    setPos(0)
+    setPlaying(false)
+  }, [open])
+  useEffect(() => {
+    if (!playing || !memo) return
+    if (pos >= memo.seconds) {
+      setPlaying(false)
+      return
+    }
+    const id = window.setTimeout(() => setPos((p) => p + 0.25), 250)
+    return () => window.clearTimeout(id)
+  }, [playing, pos, memo])
+  const words = memo ? t(memo.transcript).split(' ') : []
+  const shownWords = memo ? Math.ceil((pos / memo.seconds) * words.length) : 0
+  return (
+    <Page title={{ ko: '모든 녹음', zh: '所有錄音' }} large dark bg="#000" tint="#0a84ff" right={<span className="nav-text">{t({ ko: '편집', zh: '編輯' })}</span>}>
+      {story.voice.map((v) => (
+        <div key={v.id} className={`vm ${open === v.id ? 'open' : ''}`}>
+          <button className="vm-head" onClick={() => setOpen(open === v.id ? null : v.id)}>
+            <b>{t(v.title)}</b>
+            <small>
+              <span>{monthDay(v.at, lang)}</span>
+              <span>{duration(v.seconds, lang)}</span>
+            </small>
+          </button>
+          {open === v.id && memo && (
+            <div className="vm-body">
+              <div className="vm-wave">
+                {Array.from({ length: 60 }).map((_, i) => (
+                  <i key={i} className={i / 60 <= pos / memo.seconds ? 'past' : ''} style={{ height: `${18 + ((i * 53) % 78)}%` }} />
+                ))}
+                <span className="vm-head-line" style={{ left: `${(pos / memo.seconds) * 100}%` }} />
+              </div>
+              <div className="vm-time">
+                <small>
+                  {pad(Math.floor(pos / 60))}:{pad(Math.floor(pos % 60))}
+                </small>
+                <small>
+                  -{pad(Math.floor((memo.seconds - pos) / 60))}:{pad(Math.ceil((memo.seconds - pos) % 60))}
+                </small>
+              </div>
+              <div className="vm-ctrl">
+                <button onClick={() => setPos((p) => Math.max(0, p - 15))} aria-label="back 15">
+                  <G n="rewind" size={26} />
+                </button>
+                <button className="vm-play" onClick={() => setPlaying((p) => !p)} aria-label="play">
+                  <G n={playing ? 'pause' : 'play'} size={34} />
+                </button>
+                <button onClick={() => setPos((p) => Math.min(memo.seconds, p + 15))} aria-label="forward 15">
+                  <G n="forward" size={26} />
+                </button>
+              </div>
+              <div className="vm-tr">
+                <small>{t({ ko: '텍스트 변환', zh: '轉錄文字' })}</small>
+                <p>
+                  <span>{words.slice(0, shownWords).join(' ')}</span> <span className="dim">{words.slice(shownWords).join(' ')}</span>
+                </p>
+              </div>
             </div>
-          ))}
-          <div className="sr muted">{t({ ko: '검색 결과는 가상의 내용입니다.', zh: '搜尋結果為虛構內容。' })}</div>
+          )}
+        </div>
+      ))}
+      <div className="vm-rec">
+        <span />
+      </div>
+    </Page>
+  )
+}
+
+/* ---------------- 검색 (네이버) ---------------- */
+export function SearchApp() {
+  const { story } = useStory()
+  const { t } = useLang()
+  const [q, setQ] = useState<string | null>(null)
+  const [draft, setDraft] = useState('')
+  const [focus, setFocus] = useState(false)
+  useBackHandler(q !== null, () => setQ(null))
+  const hit = q !== null ? story.searches.find((s) => t(s.q) === q || t(s.q).includes(q) || q.includes(t(s.q))) : null
+  const go = (text: string) => {
+    setQ(text)
+    setDraft(text)
+    setFocus(false)
+  }
+  return (
+    <div className="nv">
+      <StatusBar />
+      <form
+        className={`nv-bar ${q !== null || focus ? 'compact' : ''}`}
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (draft.trim()) go(draft.trim())
+        }}
+      >
+        {q !== null && (
+          <button type="button" className="nv-back" onClick={() => setQ(null)}>
+            <G n="back" size={22} w={2.4} />
+          </button>
+        )}
+        <span className="nv-n">N</span>
+        <input value={draft} onChange={(e) => setDraft(e.target.value)} onFocus={() => setFocus(true)} placeholder={t({ ko: '검색어를 입력해 주세요.', zh: '請輸入搜尋字詞。' })} />
+        <button className="nv-go" aria-label={t(UI.search)}>
+          <G n="search" size={20} w={2.6} />
+        </button>
+      </form>
+      {q !== null ? (
+        <div className="nv-results">
+          <div className="nv-tabs">
+            {[{ ko: '통합', zh: '綜合' }, { ko: '블로그', zh: '部落格' }, { ko: '카페', zh: '咖啡廳' }, { ko: '이미지', zh: '圖片' }, { ko: '지식iN', zh: '知識iN' }].map((x, i) => (
+              <span key={i} className={i === 0 ? 'on' : ''}>
+                {t(x)}
+              </span>
+            ))}
+          </div>
+          {hit ? (
+            hit.result.map((r, i) => (
+              <div key={i} className="nv-card">
+                <small>
+                  <span className="nv-src" /> blog.naver.com
+                </small>
+                <b>{t(r.title)}</b>
+                <p>{t(r.body)}</p>
+              </div>
+            ))
+          ) : (
+            <div className="nv-card">
+              <b>{t({ ko: `'${q}'에 대한 검색결과가 없습니다.`, zh: `找不到「${q}」的搜尋結果。` })}</b>
+              <p>{t({ ko: '단어의 철자가 정확한지 확인해 보세요.', zh: '請確認拼字是否正確。' })}</p>
+            </div>
+          )}
+          <p className="muted center">{t({ ko: '검색 결과는 가상의 내용입니다.', zh: '搜尋結果為虛構內容。' })}</p>
         </div>
       ) : (
-        <div className="search-hist">
-          <h3>{t(UI.recentSearches)}</h3>
-          {story.searches.map((s, i) => (
-            <button key={i} onClick={() => setQ(i)}>
-              <span>🕘</span>
-              {t(s.q)}
-            </button>
-          ))}
+        <div className="nv-home">
+          {!focus && (
+            <div className="nv-shortcuts">
+              {['메일', '카페', '블로그', '쇼핑', '뉴스', '지도'].map((x, i) => (
+                <span key={x}>
+                  <i style={{ background: ['#03c75a', '#4fc76b', '#2db400', '#ff5a5a', '#3d7bf5', '#26b6c7'][i] }} />
+                  {x}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="nv-hist">
+            <div className="nv-hist-h">
+              <b>{t(UI.recentSearches)}</b>
+              <small>{t({ ko: '전체삭제', zh: '全部刪除' })}</small>
+            </div>
+            {story.searches.map((s, i) => (
+              <button key={i} onClick={() => go(t(s.q))}>
+                <G n="clock" size={16} w={2} />
+                <span>{t(s.q)}</span>
+                <small>{'01.' + pad(20 + (i % 9))}</small>
+              </button>
+            ))}
+          </div>
         </div>
       )}
-      <HomeBar />
     </div>
   )
 }
@@ -217,183 +386,95 @@ export function AiApp() {
   const { t } = useLang()
   const [open, setOpen] = useState(story.ai[0]?.id ?? null)
   const [menu, setMenu] = useState(false)
+  const [extra, setExtra] = useState<Record<string, { q: string; a: string | null }[]>>({})
+  const [draft, setDraft] = useState('')
+  const body = useRef<HTMLDivElement>(null)
   const chat = story.ai.find((c) => c.id === open)
+  const mine = open ? extra[open] ?? [] : []
+  useEffect(() => {
+    body.current?.scrollTo({ top: 1e6, behavior: 'smooth' })
+  }, [mine.length, mine[mine.length - 1]?.a, open])
+  const ask = () => {
+    const q = draft.trim()
+    if (!q || !open) return
+    setDraft('')
+    const id = open
+    setExtra((e) => ({ ...e, [id]: [...(e[id] ?? []), { q, a: null }] }))
+    window.setTimeout(() => {
+      const a = t({
+        ko: '이 휴대폰의 주인이 아니시군요. 남의 대화를 너무 오래 보면 실례예요 🙂 주인에게 돌려주는 건 어떨까요?',
+        zh: '您似乎不是這支手機的主人。偷看別人的對話太久不太禮貌喔 🙂 要不要還給主人呢？',
+      })
+      setExtra((e) => ({ ...e, [id]: (e[id] ?? []).map((x, i, arr) => (i === arr.length - 1 ? { ...x, a } : x)) }))
+    }, 1600)
+  }
   return (
-    <Shell className="ai">
-      <NavHeader title={UI.ai} right={<button onClick={() => setMenu((m) => !m)}>☰</button>} />
-      {menu && (
-        <div className="ai-menu">
-          <h4>{t(UI.recentChats)}</h4>
-          {story.ai.map((c) => (
-            <button
-              key={c.id}
-              className={c.id === open ? 'on' : ''}
-              onClick={() => {
-                setOpen(c.id)
-                setMenu(false)
-              }}
-            >
-              {t(c.title)}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="ai-body">
+    <div className="ai">
+      <StatusBar />
+      <div className="ai-nav">
+        <button onClick={() => setMenu(true)} aria-label="menu">
+          <G n="menu" size={24} />
+        </button>
+        <b>{chat ? t(chat.title) : ''}</b>
+        <G n="compose" size={22} />
+      </div>
+      <div className="ai-body" ref={body}>
         {chat?.turns.map((turn, i) => (
           <div key={i}>
             <div className="ai-q">{t(turn.q)}</div>
             <div className="ai-a">
-              <span className="ai-logo">✳︎</span>
+              <span className="ai-logo">
+                <G n="sparkle" size={18} />
+              </span>
               <p>{t(turn.a)}</p>
             </div>
           </div>
         ))}
-      </div>
-      <div className="ai-input">
-        <span>{t(UI.aiInput)}</span>
-      </div>
-      <small className="ai-disc">{t(UI.aiDisclaimer)}</small>
-    </Shell>
-  )
-}
-
-/* ---------------- 캘린더 ---------------- */
-export function CalendarApp() {
-  const { story, clock } = useStory()
-  const { t, lang } = useLang()
-  const now = new Date(ms(clock) + 9 * 3600_000)
-  const y = now.getUTCFullYear()
-  const m = now.getUTCMonth()
-  const first = new Date(Date.UTC(y, m, 1)).getUTCDay()
-  const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
-  const key = (d: number) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-  const [sel, setSel] = useState(now.getUTCDate())
-  const events = story.calendar.filter((e) => e.date === key(sel))
-  const wds = lang === 'ko' ? ['일', '월', '화', '수', '목', '금', '토'] : ['日', '一', '二', '三', '四', '五', '六']
-  return (
-    <Shell>
-      <NavHeader title={lang === 'ko' ? `${y}년 ${m + 1}월` : `${y}年${m + 1}月`} large />
-      <div className="cal">
-        {wds.map((w) => (
-          <small key={w}>{w}</small>
-        ))}
-        {Array.from({ length: first }).map((_, i) => (
-          <span key={`e${i}`} />
-        ))}
-        {Array.from({ length: days }).map((_, i) => {
-          const d = i + 1
-          const has = story.calendar.some((e) => e.date === key(d))
-          return (
-            <button key={d} className={`${d === now.getUTCDate() ? 'today' : ''} ${d === sel ? 'sel' : ''}`} onClick={() => setSel(d)}>
-              {d}
-              {has && <i />}
-            </button>
-          )
-        })}
-      </div>
-      <div className="cal-events">
-        {events.length === 0 && <p className="muted">{t(UI.noItems)}</p>}
-        {events.map((e, i) => (
-          <div key={i} className="cal-ev" style={{ borderColor: e.color }}>
-            <b>{t(e.title)}</b>
-            <small>{e.time ?? t(UI.allDay)}</small>
-          </div>
-        ))}
-      </div>
-    </Shell>
-  )
-}
-
-/* ---------------- 음성 메모 ---------------- */
-export function VoiceApp() {
-  const { story } = useStory()
-  const { t, lang } = useLang()
-  const [open, setOpen] = useState<string | null>(null)
-  return (
-    <Shell className="voice">
-      <NavHeader title={UI.voiceMemos} large />
-      <div className="list">
-        {story.voice.map((v) => (
-          <div key={v.id} className="voice-item">
-            <button className="row" onClick={() => setOpen(open === v.id ? null : v.id)}>
-              <span className="row-mid">
-                <b>{t(v.title)}</b>
-                <small>{`${monthDay(v.at, lang)} · ${duration(v.seconds, lang)}`}</small>
+        {mine.map((m, i) => (
+          <div key={`m${i}`}>
+            <div className="ai-q">{m.q}</div>
+            <div className="ai-a">
+              <span className="ai-logo">
+                <G n="sparkle" size={18} />
               </span>
-              <span className="voice-play">{open === v.id ? '❚❚' : '▶'}</span>
-            </button>
-            {open === v.id && (
-              <div className="voice-tr">
-                <div className="wave">
-                  {Array.from({ length: 40 }).map((_, i) => (
-                    <i key={i} style={{ height: `${20 + ((i * 37) % 70)}%`, animationDelay: `${i * 40}ms` }} />
-                  ))}
-                </div>
-                <p>{t(v.transcript)}</p>
-              </div>
-            )}
+              {m.a ? <p className="fade-in">{m.a}</p> : <p className="ai-thinking">• • •</p>}
+            </div>
           </div>
         ))}
       </div>
-    </Shell>
-  )
-}
-
-/* ---------------- 설정 ---------------- */
-export function SettingsApp({ onExit }: { onExit: () => void }) {
-  const { story, restart, setScreen } = useStory()
-  const { t, lang, setLang } = useLang()
-  const [about, setAbout] = useState(false)
-  return (
-    <Shell className="settings">
-      <NavHeader title={UI.settings} large />
-      <div className="set-group">
-        <div className="set-row profile">
-          <Avatar size={56} radius={28} src={story.owner.avatar} />
-          <span>
-            <b>{t(story.owner.name)}</b>
-            <small>{t({ ko: 'Apple 계정, iCloud 등', zh: 'Apple 帳號、iCloud 等' })}</small>
-          </span>
-        </div>
-      </div>
-      <div className="set-group">
-        <div className="set-row">
-          <span>📶 Wi-Fi</span>
-          <small>{story.wifi}</small>
-        </div>
-        <div className="set-row">
-          <span>🎧 Bluetooth</span>
-          <small>{t(story.devices[0])}</small>
-        </div>
-      </div>
-      <div className="set-group">
-        <div className="set-row">
-          <span>🌐 {t(UI.language)}</span>
-          <span className="seg">
-            <button className={lang === 'ko' ? 'on' : ''} onClick={() => setLang('ko')}>
-              한국어
-            </button>
-            <button className={lang === 'zh' ? 'on' : ''} onClick={() => setLang('zh')}>
-              中文
-            </button>
-          </span>
-        </div>
-      </div>
-      <div className="set-group">
-        <button className="set-row" onClick={() => setScreen({ kind: 'lock' })}>
-          <span>🔒 {t(UI.toLock)}</span>
+      <form
+        className="ai-input"
+        onSubmit={(e) => {
+          e.preventDefault()
+          ask()
+        }}
+      >
+        <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={t(UI.aiInput)} />
+        <button className={draft.trim() ? 'on' : ''} aria-label={t(UI.send)}>
+          <G n="arrowUp" size={18} w={2.6} />
         </button>
-        <button className="set-row" onClick={restart}>
-          <span className="red">↺ {t(UI.restart)}</span>
-        </button>
-        <button className="set-row" onClick={onExit}>
-          <span>📱 {t(UI.toSelect)}</span>
-        </button>
-        <button className="set-row" onClick={() => setAbout((a) => !a)}>
-          <span>ⓘ {t(UI.about)}</span>
-        </button>
-        {about && <p className="set-about">{t(UI.aboutText)}</p>}
-      </div>
-    </Shell>
+      </form>
+      <small className="ai-disc">{t(UI.aiDisclaimer)}</small>
+      {menu && (
+        <div className="ai-menu-bg" onClick={() => setMenu(false)}>
+          <div className="ai-menu" onClick={(e) => e.stopPropagation()}>
+            <StatusBar />
+            <h4>{t(UI.recentChats)}</h4>
+            {story.ai.map((c) => (
+              <button
+                key={c.id}
+                className={c.id === open ? 'on' : ''}
+                onClick={() => {
+                  setOpen(c.id)
+                  setMenu(false)
+                }}
+              >
+                {t(c.title)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

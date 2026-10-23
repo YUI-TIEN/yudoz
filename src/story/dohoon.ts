@@ -11,7 +11,8 @@ export const dohoon: PhoneStory = {
   id: 'dohoon',
   owner: { name: { ko: '도훈', zh: '道勳' }, device: { ko: '도훈의 iPhone', zh: '道勳的 iPhone' }, status: { ko: '줏대 있게 살자', zh: '活得有主見一點' } },
   accent: '#ff8fb1',
-  wallpaper: 'linear-gradient(165deg,#ffc2d4 0%,#c77d9b 40%,#2a1d2e 100%)',
+  wallpaper:
+    'radial-gradient(110% 65% at 90% 0%, #ffe3ec 0%, transparent 55%), radial-gradient(90% 60% at 0% 35%, #ff9dbd 0%, transparent 60%), radial-gradient(120% 70% at 80% 85%, #8a3f6d 0%, transparent 65%), radial-gradient(100% 60% at 0% 100%, #2b1430 0%, transparent 70%), linear-gradient(165deg, #ffc8da, #c4618d 55%, #3a1838)',
   lockEmoji: '🐺',
   passcode: '1107',
   startAt: kst('2026-11-06 23:57'),
@@ -37,12 +38,12 @@ export const dohoon: PhoneStory = {
 
   contacts: {
     shinyu: { name: { ko: '신유형', zh: '申惟哥' }, status: { ko: '42 🩵', zh: '42 🩵' }, phone: '010-1107-2003' },
-    kyungmin: { name: { ko: '경민이', zh: '炅潣' } },
-    jihoon: { name: { ko: '지훈이', zh: '志薰' } },
-    youngjae: { name: { ko: '영재', zh: '英宰' } },
-    hanjin: { name: { ko: '한진이', zh: '韓振' } },
-    mom: { name: { ko: '엄마', zh: '媽媽' } },
-    manager: { name: { ko: '매니저형', zh: '經紀人哥' } },
+    kyungmin: { name: { ko: '경민이', zh: '炅潣' }, phone: '010-2007-0416' },
+    jihoon: { name: { ko: '지훈이', zh: '志薰' }, phone: '010-2006-0328' },
+    youngjae: { name: { ko: '영재형', zh: '英宰哥' }, phone: '010-2005-0531' },
+    hanjin: { name: { ko: '한진이', zh: '韓振' }, phone: '010-2006-0102' },
+    mom: { name: { ko: '엄마', zh: '媽媽' }, phone: '010-6612-3045' },
+    manager: { name: { ko: '매니저형', zh: '經紀人哥' }, phone: '010-3392-1180' },
   },
 
   rooms: [
@@ -337,6 +338,13 @@ export const dohoon: PhoneStory = {
         zh: '祝你生日快樂～祝你生日快樂～親愛的……啊這個麥克風沒開著吧？（笑）重來。志薰不要加和聲。',
       },
     },
+  ],
+
+  alarms: [
+    { time: '10:00', label: { ko: '기상 (11시 출발)', zh: '起床（十一點出發）' }, on: true },
+    { time: '23:55', label: { ko: '작전 개시 🎂', zh: '作戰開始 🎂' }, on: true },
+    { time: '00:00', label: { ko: '형한테 먼저 보내기', zh: '先傳給哥' }, on: true },
+    { time: '07:30', label: { ko: '(주말) 볼링', zh: '（週末）保齡球' }, on: false },
   ],
 
   script: [

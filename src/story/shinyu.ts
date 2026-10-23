@@ -11,7 +11,8 @@ export const shinyu: PhoneStory = {
   id: 'shinyu',
   owner: { name: { ko: '신유', zh: '申惟' }, device: { ko: '신유의 iPhone', zh: '申惟的 iPhone' }, status: { ko: '42 🩵', zh: '42 🩵' } },
   accent: '#7fb4ff',
-  wallpaper: 'linear-gradient(160deg,#a8c8ff 0%,#6d8fd6 45%,#2b3a6b 100%)',
+  wallpaper:
+    'radial-gradient(110% 65% at 10% 0%, #e3eeff 0%, transparent 55%), radial-gradient(90% 60% at 100% 30%, #8fb5ff 0%, transparent 60%), radial-gradient(120% 70% at 20% 85%, #3d5fc4 0%, transparent 65%), radial-gradient(100% 60% at 100% 100%, #1a2457 0%, transparent 70%), linear-gradient(165deg, #b9d3ff, #4a68c2 55%, #1d2a63)',
   lockEmoji: '🩵',
   passcode: '0130',
   startAt: kst('2026-01-29 23:58'),
@@ -40,13 +41,13 @@ export const shinyu: PhoneStory = {
 
   contacts: {
     dohoon: { name: { ko: '도훈이🐺', zh: '道勳🐺' }, status: { ko: '줏대 있게 살자', zh: '活得有主見一點' }, phone: '010-0130-2005' },
-    kyungmin: { name: { ko: '경민이', zh: '炅潣' } },
-    jihoon: { name: { ko: '지훈이', zh: '志薰' } },
-    youngjae: { name: { ko: '영재', zh: '英宰' } },
-    hanjin: { name: { ko: '한진이', zh: '韓振' } },
-    mom: { name: { ko: '엄마', zh: '媽媽' } },
-    noona: { name: { ko: '큰누나', zh: '大姊' } },
-    manager: { name: { ko: '매니저형', zh: '經紀人哥' } },
+    kyungmin: { name: { ko: '경민이', zh: '炅潣' }, phone: '010-2007-0416' },
+    jihoon: { name: { ko: '지훈이', zh: '志薰' }, phone: '010-2006-0328' },
+    youngjae: { name: { ko: '영재', zh: '英宰' }, phone: '010-2005-0531' },
+    hanjin: { name: { ko: '한진이', zh: '韓振' }, phone: '010-2006-0102' },
+    mom: { name: { ko: '엄마', zh: '媽媽' }, phone: '010-5123-0871' },
+    noona: { name: { ko: '큰누나', zh: '大姊' }, phone: '010-4402-7719' },
+    manager: { name: { ko: '매니저형', zh: '經紀人哥' }, phone: '010-3392-1180' },
     bowling: { name: { ko: '스트라이크 볼링장', zh: 'Strike 保齡球館' } },
   },
 
@@ -418,6 +419,13 @@ export const shinyu: PhoneStory = {
         zh: '（清喉嚨）道勳啊生日快樂。這次也是十二點一到就……啊不對重來。（笑）這要怎麼念出聲啦……炅潣不要笑。把門關上。',
       },
     },
+  ],
+
+  alarms: [
+    { time: '07:00', label: { ko: '기상', zh: '起床' }, on: true },
+    { time: '09:30', label: { ko: '출발 준비 (10시)', zh: '準備出發（十點）' }, on: true },
+    { time: '23:55', label: { ko: '케이크 꺼내기 (김치통 밑)', zh: '拿出蛋糕（泡菜盒下面）' }, on: true },
+    { time: '00:00', label: { ko: '🐺 12시 땡 편지 보내기', zh: '🐺 十二點整傳信' }, on: true },
   ],
 
   script: [

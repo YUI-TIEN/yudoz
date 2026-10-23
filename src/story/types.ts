@@ -1,6 +1,6 @@
 import type { L } from '../i18n'
 
-export type AppId = 'kakao' | 'messages' | 'phone' | 'photos' | 'notes' | 'search' | 'ai' | 'calendar' | 'voice' | 'settings'
+export type AppId = 'kakao' | 'messages' | 'phone' | 'photos' | 'notes' | 'search' | 'ai' | 'calendar' | 'voice' | 'settings' | 'camera' | 'clock'
 
 export type Contact = {
   name: L
@@ -37,6 +37,8 @@ export type SearchItem = { q: L; result: { title: L; body: L }[] }
 export type AiChat = { id: string; title: L; turns: { q: L; a: L }[] }
 export type CalEvent = { date: string; title: L; time?: string; color: string }
 export type VoiceMemo = { id: string; title: L; at: string; seconds: number; transcript: L }
+
+export type Alarm = { time: string; label: L; on: boolean }
 
 export type LockNotice = { app: AppId; icon: string; title: L; body: L; time: L }
 
@@ -86,5 +88,6 @@ export type PhoneStory = {
   ai: AiChat[]
   calendar: CalEvent[]
   voice: VoiceMemo[]
+  alarms: Alarm[]
   script: Trigger[]
 }
