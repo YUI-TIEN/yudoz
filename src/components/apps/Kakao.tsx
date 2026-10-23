@@ -3,7 +3,7 @@ import { useLang, UI, type L } from '../../i18n'
 import { fullDate, listDate, sameDay, time } from '../../time'
 import { useStory, type LiveMsg } from '../../story/engine'
 import type { ChatMsg, Room } from '../../story/types'
-import { useBackHandler } from '../../device'
+import { useBackHandler, useDevice } from '../../device'
 import { Avatar, PhotoTile } from '../common'
 import { StatusBar } from '../system'
 import { G } from '../icons'
@@ -125,6 +125,7 @@ function Friends({ onProfile }: { onProfile: (id: string) => void }) {
 
 function Profile({ id, onClose }: { id: string; onClose: () => void }) {
   const { story, setOpenRoom } = useStory()
+  const { dial } = useDevice()
   const { t } = useLang()
   useBackHandler(true, onClose)
   const me = id === 'me'
@@ -160,12 +161,22 @@ function Profile({ id, onClose }: { id: string; onClose: () => void }) {
         </button>
         {!me && (
           <>
-            <button>
+            <button
+              onClick={() => {
+                onClose()
+                dial(id)
+              }}
+            >
               <G n="phone" size={26} w={1.6} />
               <span>{t({ ko: '통화하기', zh: '語音通話' })}</span>
             </button>
-            <button>
-              <G n="camera" size={26} w={1.6} />
+            <button
+              onClick={() => {
+                onClose()
+                dial(id, true)
+              }}
+            >
+              <G n="video" size={26} w={1.6} />
               <span>{t({ ko: '페이스톡', zh: '視訊通話' })}</span>
             </button>
           </>
@@ -220,16 +231,18 @@ function ChatList() {
 }
 
 function ChatRoom({ id }: { id: string }) {
-  const { rooms, story, setOpenRoom, canReply, send } = useStory()
+  const { rooms, story, setOpenRoom, send } = useStory()
+  const { dial, shots } = useDevice()
   const { t, lang } = useLang()
   const room = rooms.find((r) => r.id === id)
   const [draft, setDraft] = useState('')
   const [drawer, setDrawer] = useState(false)
+  const [panel, setPanel] = useState<null | 'plus' | 'emoji' | 'album'>(null)
   const [viewer, setViewer] = useState<AnyMsg | null>(null)
   const scroller = useRef<HTMLDivElement>(null)
   const msgs: AnyMsg[] = room ? [...room.messages, ...room.live] : []
-  const enabled = canReply(id)
-  useBackHandler(true, () => (viewer ? setViewer(null) : drawer ? setDrawer(false) : setOpenRoom(null)))
+  const enabled = true
+  useBackHandler(true, () => (viewer ? setViewer(null) : panel ? setPanel(null) : drawer ? setDrawer(false) : setOpenRoom(null)))
 
   useEffect(() => {
     const el = scroller.current
@@ -263,6 +276,11 @@ function ChatRoom({ id }: { id: string }) {
           {room.group && <em>{room.group.members.length + 1}</em>}
         </b>
         <span>
+          {room.contactId && (
+            <button onClick={() => dial(room.contactId!)} aria-label="call">
+              <G n="phone" size={21} w={1.9} />
+            </button>
+          )}
           <G n="search" size={22} w={1.9} />
           <button onClick={() => setDrawer(true)} aria-label="menu">
             <G n="menu" size={22} w={1.9} />
@@ -317,7 +335,7 @@ function ChatRoom({ id }: { id: string }) {
           submit()
         }}
       >
-        <button type="button" className="k-plus" aria-label="plus">
+        <button type="button" className={`k-plus ${panel === 'plus' || panel === 'album' ? 'open' : ''}`} aria-label="plus" onClick={() => setPanel((x) => (x === 'plus' || x === 'album' ? null : 'plus'))}>
           <G n="plus" size={22} w={2} />
         </button>
         <label className="k-field">
@@ -325,11 +343,14 @@ function ChatRoom({ id }: { id: string }) {
             value={draft}
             disabled={!enabled}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder={t(enabled ? UI.messageInput : UI.messageLocked)}
+            placeholder={t(UI.messageInput)}
             enterKeyHint="send"
             autoComplete="off"
+            onFocus={() => setPanel(null)}
           />
-          <G n="emoji" size={22} w={1.8} />
+          <button type="button" onClick={() => setPanel((x) => (x === 'emoji' ? null : 'emoji'))} aria-label="emoticon" className={panel === 'emoji' ? 'on' : ''}>
+            <G n="emoji" size={22} w={1.8} />
+          </button>
         </label>
         {draft.trim() ? (
           <button type="submit" className="k-send" aria-label={t(UI.send)}>
@@ -341,6 +362,61 @@ function ChatRoom({ id }: { id: string }) {
           </button>
         )}
       </form>
+      {panel === 'plus' && (
+        <div className="k-panel k-plus-panel">
+          {[
+            { n: 'photo', l: { ko: '앨범', zh: '相簿' }, c: '#7bc65b', go: () => setPanel('album') },
+            { n: 'camera', l: { ko: '카메라', zh: '相機' }, c: '#5aa9e6', go: () => setPanel('album') },
+            { n: 'phone', l: { ko: '통화하기', zh: '語音通話' }, c: '#f0a43a', go: () => room.contactId && dial(room.contactId) },
+            { n: 'video', l: { ko: '페이스톡', zh: '視訊通話' }, c: '#e86a6a', go: () => room.contactId && dial(room.contactId, true) },
+            { n: 'gift', l: { ko: '선물하기', zh: '送禮' }, c: '#f06aa0', go: () => send(id, { sticker: '🎁' }) },
+            { n: 'location', l: { ko: '지도', zh: '地圖' }, c: '#58b4a9', go: () => send(id, t({ ko: '📍 숙소', zh: '📍 宿舍' })) },
+          ].map((b) => (
+            <button
+              key={b.n}
+              onClick={() => {
+                b.go()
+                if (b.n !== 'photo' && b.n !== 'camera') setPanel(null)
+              }}
+            >
+              <i style={{ background: b.c }}>
+                <G n={b.n} size={24} w={1.8} />
+              </i>
+              <span>{t(b.l)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {panel === 'album' && (
+        <div className="k-panel k-album">
+          {[...shots.map((s) => ({ id: s.id, src: s.src, emoji: '📷', tint: '#ccc', caption: { ko: '방금 찍은 사진', zh: '剛拍的照片' } })), ...[...story.photos].reverse()].map((p) => (
+            <button
+              key={p.id}
+              onClick={() => {
+                send(id, { photo: p.caption, src: p.src })
+                setPanel(null)
+              }}
+            >
+              <PhotoTile src={p.src} emoji={p.emoji} tint={p.tint} />
+            </button>
+          ))}
+        </div>
+      )}
+      {panel === 'emoji' && (
+        <div className="k-panel k-emoji">
+          {['🐺', '🩵', '🫶', '😭', '🥹', '😆', '🎂', '🎳', '🍜', '😴', '👍', '🙈', '💌', '🐰', '🐼', '🤐'].map((e) => (
+            <button
+              key={e}
+              onClick={() => {
+                send(id, { sticker: e })
+                setPanel(null)
+              }}
+            >
+              {e}
+            </button>
+          ))}
+        </div>
+      )}
       {drawer && (
         <div className="k-drawer-bg" onClick={() => setDrawer(false)}>
           <div className="k-drawer" onClick={(e) => e.stopPropagation()}>

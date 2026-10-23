@@ -4,6 +4,18 @@ import { listDate, ms } from '../../time'
 import { useStory } from '../../story/engine'
 import type { IgPost, Pic, Tweet } from '../../story/types'
 import { useBackHandler, useDevice } from '../../device'
+import { PEOPLE, pickReply } from '../../story/personas'
+import { playPing } from '../../sound'
+
+/** Instagram 아이디 → 연락처 id */
+const IG_TO_CONTACT: Record<string, string> = {
+  'hoon.wolf': 'dohoon',
+  'yu.42_': 'shinyu',
+  'kyungmin.p': 'kyungmin',
+  'jihoon_06': 'jihoon',
+  'young.jae': 'youngjae',
+  'hanjin.zz': 'hanjin',
+}
 import { Avatar, PhotoTile } from '../common'
 import { StatusBar } from '../system'
 import { G } from '../icons'
@@ -441,8 +453,25 @@ function IgDms({ open, onOpen, onClose }: { open: string | null; onOpen: (h: str
   const { story, clock } = useStory()
   const { t, lang } = useLang()
   const ig = story.extra.instagram
-  const [sent, setSent] = useState<Record<string, string[]>>({})
+  const [sent, setSent] = useState<Record<string, { me: boolean; text: L }[]>>({})
+  const [typingFor, setTypingFor] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
+  const count = useRef<Record<string, number>>({})
+  const reply = (handle: string, text: string) => {
+    const persona = PEOPLE[story.id]?.[IG_TO_CONTACT[handle] ?? '']
+    if (!persona) return
+    const n = count.current[handle] ?? 0
+    count.current[handle] = n + 1
+    const lines = pickReply(persona, text, n)
+    window.setTimeout(() => setTypingFor(handle), 1200)
+    lines.forEach((line, i) => {
+      window.setTimeout(() => {
+        setSent((s) => ({ ...s, [handle]: [...(s[handle] ?? []), { me: false, text: line }] }))
+        playPing()
+        if (i === lines.length - 1) setTypingFor(null)
+      }, 2800 + i * 1800)
+    })
+  }
   useBackHandler(true, () => (open ? onOpen('list') : onClose()))
   const thread = ig.dms.find((d) => d.with === open)
   if (thread) {
@@ -475,19 +504,28 @@ function IgDms({ open, onOpen, onClose }: { open: string | null; onOpen: (h: str
             </div>
           ))}
           {mine.map((m, i) => (
-            <div key={`s${i}`} className="ig-bub me">
-              {m}
+            <div key={`s${i}`} className={`ig-bub fade-in ${m.me ? 'me' : ''}`}>
+              {t(m.text)}
             </div>
           ))}
-          {mine.length > 0 && <small className="ig-seen">{t({ ko: '보냄', zh: '已傳送' })}</small>}
+          {mine.length > 0 && mine[mine.length - 1].me && <small className="ig-seen">{typingFor ? t({ ko: '읽음', zh: '已讀' }) : t({ ko: '보냄', zh: '已傳送' })}</small>}
+          {typingFor === thread.with && (
+            <div className="ig-bub ig-typing">
+              <i />
+              <i />
+              <i />
+            </div>
+          )}
         </div>
         <form
           className="ig-dm-input"
           onSubmit={(e) => {
             e.preventDefault()
             if (!draft.trim()) return
-            setSent((s) => ({ ...s, [thread.with]: [...(s[thread.with] ?? []), draft.trim()] }))
+            const text = draft.trim()
+            setSent((s) => ({ ...s, [thread.with]: [...(s[thread.with] ?? []), { me: true, text }] }))
             setDraft('')
+            reply(thread.with, text)
           }}
         >
           <span className="ig-cam">

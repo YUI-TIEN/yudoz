@@ -230,6 +230,7 @@ export const shinyu: PhoneStory = {
     {
       id: 'dohoonsms',
       from: { ko: '도훈이🐺', zh: '道勳🐺' },
+      contactId: 'dohoon',
       messages: [
         { at: kst('2026-01-08 03:12'), text: { ko: '형 카톡 안 봐서 문자 보냄', zh: '哥沒看 Kakao 所以傳簡訊' } },
         { at: kst('2026-01-08 03:12'), text: { ko: '거실 불 끄고 자요', zh: '客廳的燈關了再睡' } },

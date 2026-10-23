@@ -47,7 +47,7 @@ export type Room = {
   muted?: boolean
 }
 
-export type SmsThread = { id: string; from: L; messages: { at: string; text: L; me?: boolean }[]; unread?: boolean }
+export type SmsThread = { id: string; from: L; contactId?: string; messages: { at: string; text: L; me?: boolean }[]; unread?: boolean }
 export type CallLog = { at: string; contactId: string; type: 'incoming' | 'outgoing' | 'missed'; seconds: number }
 export type Note = { id: string; title: L; at: string; body: L; pinned?: boolean; locked?: boolean }
 export type Photo = { id: string; at: string; caption: L; emoji: string; tint: string; src?: string }

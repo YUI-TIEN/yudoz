@@ -8,6 +8,7 @@ import { playTick, playUnlock, startDialTone, startRing, stopRing, unlockAudio }
 import { AppIcon, G } from './icons'
 import { Avatar } from './common'
 import { wallpaperOf } from '../wallpapers'
+import { PEOPLE } from '../story/personas'
 
 /* ---------------- 공통: 드래그 ---------------- */
 
@@ -770,41 +771,124 @@ export function CallScreen() {
 
 export function OutgoingCall() {
   const { outgoing, dial } = useDevice()
-  const { story, addCall, call } = useStory()
+  const { story, addCall, call, pushMessage } = useStory()
   const { t } = useLang()
-  const [phase, setPhase] = useState<'calling' | 'noanswer'>('calling')
+  const [phase, setPhase] = useState<'calling' | 'active' | 'noanswer'>('calling')
+  const [sec, setSec] = useState(0)
+  const [shown, setShown] = useState(0)
+  const [cam, setCam] = useState<MediaStream | null>(null)
+  const video = useRef<HTMLVideoElement>(null)
+  const to = outgoing?.to ?? ''
+  const isVideo = !!outgoing?.video
+  const persona = PEOPLE[story.id]?.[to]
+  const who = story.contacts[to]
+
+  // 연결음 → 받거나 응답 없음
   useEffect(() => {
     if (!outgoing) return
     setPhase('calling')
+    setSec(0)
+    setShown(0)
     startDialTone()
+    const ring = 3500 + Math.random() * 2500
     const a = window.setTimeout(() => {
       stopRing()
-      setPhase('noanswer')
-    }, 9000)
+      setPhase(persona?.call.answer ? 'active' : 'noanswer')
+    }, persona?.call.answer ? ring : 11000)
     return () => {
       window.clearTimeout(a)
       stopRing()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [outgoing])
+
+  // 통화 시간
+  useEffect(() => {
+    if (phase !== 'active') return
+    const id = window.setInterval(() => setSec((x) => x + 1), 1000)
+    return () => window.clearInterval(id)
+  }, [phase])
+
+  // 상대 말이 자막으로 하나씩
+  useEffect(() => {
+    if (phase !== 'active' || !persona || shown >= persona.call.lines.length) return
+    const id = window.setTimeout(() => setShown((n) => n + 1), shown === 0 ? 900 : 2300)
+    return () => window.clearTimeout(id)
+  }, [phase, shown, persona])
+
+  // 페이스톡이면 내 카메라
+  useEffect(() => {
+    if (!isVideo || !navigator.mediaDevices?.getUserMedia) return
+    let s: MediaStream | null = null
+    let cancelled = false
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: 'user' }, audio: false })
+      .then((m) => {
+        if (cancelled) return m.getTracks().forEach((tr) => tr.stop())
+        s = m
+        setCam(m)
+      })
+      .catch(() => setCam(null))
+    return () => {
+      cancelled = true
+      s?.getTracks().forEach((tr) => tr.stop())
+      setCam(null)
+    }
+  }, [isVideo, outgoing])
+
+  useEffect(() => {
+    if (video.current && cam) video.current.srcObject = cam
+  }, [cam, phase])
+
   useEffect(() => {
     if (call && outgoing) dial(null)
   }, [call, outgoing, dial])
+
   if (!outgoing) return null
-  const who = story.contacts[outgoing]
   const end = () => {
     stopRing()
-    addCall(who ? outgoing : outgoing, 'outgoing', 0)
+    addCall(to, phase === 'active' ? 'outgoing' : 'outgoing', sec)
+    if (phase !== 'active' && persona?.call.missedMsg) {
+      const msg = persona.call.missedMsg
+      window.setTimeout(() => pushMessage(to, msg), 2500)
+    }
     dial(null)
   }
+  const mm = String(Math.floor(sec / 60)).padStart(2, '0')
+  const ss = String(sec % 60).padStart(2, '0')
+  const status =
+    phase === 'calling' ? (isVideo ? t({ ko: '페이스톡 연결 중…', zh: '視訊通話連線中…' }) : t({ ko: '통화 연결 중…', zh: '撥號中…' })) : phase === 'noanswer' ? t({ ko: '응답 없음', zh: '無人接聽' }) : `${mm}:${ss}`
+
   return (
-    <div className="call outgoing" style={{ background: '#1c1c1e' }}>
+    <div className={`call outgoing ${isVideo ? 'facetime' : ''}`} style={{ background: isVideo ? '#000' : wallpaperOf(story, 0) }}>
+      {isVideo && (
+        <div className={`ft-self ${phase === 'active' ? 'pip' : ''}`}>
+          {cam ? <video ref={video} autoPlay playsInline muted /> : <span className="ft-nocam">{t({ ko: '카메라 꺼짐', zh: '相機已關閉' })}</span>}
+        </div>
+      )}
+      {isVideo && phase === 'active' && (
+        <div className="ft-remote">
+          <Avatar size={140} radius={70} src={who?.avatar} />
+          <small>{t({ ko: '상대방 카메라가 꺼져 있습니다', zh: '對方的相機已關閉' })}</small>
+        </div>
+      )}
+      {!isVideo && <div className="call-dim" />}
       <StatusBar dark />
       <div className="call-who">
-        <small>{phase === 'calling' ? t({ ko: '통화 연결 중…', zh: '撥號中…' }) : t({ ko: '응답 없음', zh: '無人接聽' })}</small>
-        <h2>{who ? t(who.name) : outgoing}</h2>
+        <small>{status}</small>
+        <h2>{who ? t(who.name) : to}</h2>
       </div>
-      <div className="call-lines" />
-      <CallButtons />
+      <div className="call-lines">
+        {phase === 'active' &&
+          persona?.call.lines.slice(0, shown).map((l, i) => (
+            <p key={i} className="fade-in">
+              {t(l)}
+            </p>
+          ))}
+        {phase === 'active' && persona && shown < persona.call.lines.length && <span className="call-typing">• • •</span>}
+        {phase === 'noanswer' && <p className="fade-in">{t({ ko: '연결이 되지 않아 삐 소리 후 음성사서함으로 연결되오니…', zh: '您撥的電話無人接聽，嗶聲後將轉入語音信箱…' })}</p>}
+      </div>
+      {!isVideo && <CallButtons />}
       <div className="call-actions one">
         <button className="call-btn end" onClick={end} aria-label={t(UI.endCall)}>
           <i>

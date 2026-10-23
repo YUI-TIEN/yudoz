@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { setMuted } from './sound'
+import { playPing, setMuted } from './sound'
+import { PEOPLE, pickReply } from './story/personas'
+import type { L } from './i18n'
 
 /** 폰 자체의 상태 (설정·제어 센터에서 바뀌는 것들). 스토리 진행과는 별개. */
 export type DeviceSettings = {
@@ -31,6 +33,7 @@ const DEFAULTS: DeviceSettings = {
 }
 
 export type Shot = { id: string; src: string; at: number }
+export type IMsg = { me: boolean; text: L; at: number }
 export type NowPlaying = { playlist: string; index: number; playing: boolean; pos: number }
 
 /** 찾을 수 있는 비밀들 */
@@ -58,12 +61,15 @@ type DeviceCtx = {
   /** 화면 안쪽 뒤로가기 핸들러 스택 (가장 위가 현재 화면) */
   pushBack: (fn: () => void) => () => void
   goBack: () => boolean
-  outgoing: string | null
-  dial: (contactIdOrNumber: string | null) => void
+  outgoing: { to: string; video: boolean } | null
+  dial: (contactIdOrNumber: string | null, video?: boolean) => void
   found: SecretId[]
   discover: (id: SecretId) => void
   toast: string | null
   now: NowPlaying | null
+  im: Record<string, IMsg[]>
+  typing: string[]
+  sendIm: (contactId: string, text: string) => void
   setNow: (n: NowPlaying | null | ((p: NowPlaying | null) => NowPlaying | null)) => void
   haptic: (ms?: number) => void
 }
@@ -84,7 +90,7 @@ export function DeviceProvider({ storyId, children }: { storyId: string; childre
   const [overlay, setOverlay] = useState<Overlay>('none')
   const [flashlight, setFlashlight] = useState(false)
   const [shots, setShots] = useState<Shot[]>([])
-  const [outgoing, setOutgoing] = useState<string | null>(null)
+  const [outgoing, setOutgoing] = useState<{ to: string; video: boolean } | null>(null)
   const backs = useRef<(() => void)[]>([])
   const foundKey = `yudoz-found-${storyId}`
   const [found, setFound] = useState<SecretId[]>(() => {
@@ -96,6 +102,33 @@ export function DeviceProvider({ storyId, children }: { storyId: string; childre
   })
   const [toast, setToast] = useState<string | null>(null)
   const [now, setNow] = useState<NowPlaying | null>(null)
+  const [im, setIm] = useState<Record<string, IMsg[]>>({})
+  const [typing, setTyping] = useState<string[]>([])
+  const imCount = useRef<Record<string, number>>({})
+  const imTimer = useRef<Record<string, number>>({})
+
+  const sendIm = useCallback(
+    (contactId: string, text: string) => {
+      setIm((m) => ({ ...m, [contactId]: [...(m[contactId] ?? []), { me: true, text, at: Date.now() }] }))
+      const persona = PEOPLE[storyId]?.[contactId]
+      if (!persona) return
+      window.clearTimeout(imTimer.current[contactId])
+      imTimer.current[contactId] = window.setTimeout(() => {
+        const n = imCount.current[contactId] ?? 0
+        imCount.current[contactId] = n + 1
+        const lines = pickReply(persona, text, n)
+        lines.forEach((line, i) => {
+          window.setTimeout(() => setTyping((x) => [...x.filter((y) => y !== contactId), contactId]), 600 + i * 2200)
+          window.setTimeout(() => {
+            setTyping((x) => x.filter((y) => y !== contactId))
+            setIm((m) => ({ ...m, [contactId]: [...(m[contactId] ?? []), { me: false, text: line, at: Date.now() }] }))
+            playPing()
+          }, 2000 + i * 2200)
+        })
+      }, 1200)
+    },
+    [storyId],
+  )
 
   useEffect(() => {
     try {
@@ -175,12 +208,15 @@ export function DeviceProvider({ storyId, children }: { storyId: string; childre
       return true
     },
     outgoing,
-    dial: setOutgoing,
+    dial: (to, video = false) => setOutgoing(to ? { to, video } : null),
     found,
     discover,
     toast,
     now,
     setNow,
+    im,
+    typing,
+    sendIm,
     haptic,
   }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

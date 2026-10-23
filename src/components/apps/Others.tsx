@@ -20,6 +20,44 @@ export function NotesApp() {
   const tint = '#e5a800'
   const locked = story.extra.lockedNote
   const unlocked = found.includes('locked-note')
+  const [mine, setMine] = useMyNotes(story.id)
+  const editing = mine.find((n) => n.id === open)
+
+  if (editing)
+    return (
+      <Page
+        title=""
+        onBack={() => {
+          // 빈 메모는 저장하지 않는다
+          if (!editing.text.trim()) setMine(mine.filter((n) => n.id !== editing.id))
+          setOpen(null)
+        }}
+        backLabel={UI.notes}
+        tint={tint}
+        bg="#fff"
+        right={
+          <>
+            <button onClick={() => (setMine(mine.filter((n) => n.id !== editing.id)), setOpen(null))} aria-label="delete">
+              <G n="trash" size={21} />
+            </button>
+            <button className="nav-text" onClick={() => (document.activeElement as HTMLElement | null)?.blur()}>
+              {t({ ko: '완료', zh: '完成' })}
+            </button>
+          </>
+        }
+      >
+        <div className="n-body">
+          <small>{`${fullDate(new Date(editing.at).toISOString(), lang)} ${time(new Date(editing.at).toISOString(), lang)}`}</small>
+          <textarea
+            className="n-edit"
+            autoFocus
+            value={editing.text}
+            placeholder={t({ ko: '메모', zh: '備忘錄' })}
+            onChange={(e) => setMine(mine.map((n) => (n.id === editing.id ? { ...n, text: e.target.value, at: ms(clock) } : n)))}
+          />
+        </div>
+      </Page>
+    )
 
   if (open === 'locked')
     return (
@@ -133,8 +171,17 @@ export function NotesApp() {
       bottom={
         <div className="n-toolbar">
           <span />
-          <small>{t({ ko: `메모 ${story.notes.length + 1}개`, zh: `${story.notes.length + 1} 則備忘錄` })}</small>
-          <G n="compose" size={22} />
+          <small>{t({ ko: `메모 ${story.notes.length + 1 + mine.length}개`, zh: `${story.notes.length + 1 + mine.length} 則備忘錄` })}</small>
+          <button
+            aria-label="new note"
+            onClick={() => {
+              const id = `my-${Date.now()}`
+              setMine([{ id, text: '', at: ms(clock) }, ...mine])
+              setOpen(id)
+            }}
+          >
+            <G n="compose" size={22} />
+          </button>
         </div>
       }
     >
@@ -154,10 +201,50 @@ export function NotesApp() {
           </div>
         </>
       )}
+      {mine.length > 0 && (
+        <>
+          <h3 className="group-h big">{t(UI.today)}</h3>
+          <div className="group-box">
+            {mine.map((n) => {
+              const lines = n.text.split('\n').filter((l) => l.trim())
+              return (
+                <button key={n.id} className="n-row" onClick={() => setOpen(n.id)}>
+                  <b>{lines[0] ?? t({ ko: '새로운 메모', zh: '新備忘錄' })}</b>
+                  <small>
+                    <em>{time(new Date(n.at).toISOString(), lang)}</em> {lines[1] ?? t({ ko: '추가 텍스트 없음', zh: '沒有其他文字' })}
+                  </small>
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
       <h3 className="group-h big">{t({ ko: '이전 30일', zh: '過去 30 天' })}</h3>
       <div className="group-box">{rest.map(row)}</div>
     </Page>
   )
+}
+
+type MyNote = { id: string; text: string; at: number }
+/** 사용자가 직접 쓴 메모 (브라우저에 저장) */
+function useMyNotes(storyId: string): [MyNote[], (n: MyNote[]) => void] {
+  const key = `yudoz-mynotes-${storyId}`
+  const [list, setList] = useState<MyNote[]>(() => {
+    try {
+      return JSON.parse(window.localStorage.getItem(key) ?? '[]') as MyNote[]
+    } catch {
+      return []
+    }
+  })
+  const save = (n: MyNote[]) => {
+    setList(n)
+    try {
+      window.localStorage.setItem(key, JSON.stringify(n))
+    } catch {
+      // 무시
+    }
+  }
+  return [list, save]
 }
 
 /* ---------------- 캘린더 ---------------- */
@@ -268,6 +355,7 @@ export function VoiceApp() {
   const [pos, setPos] = useState(0)
   const [playing, setPlaying] = useState(false)
   const memo = story.voice.find((v) => v.id === open)
+  const [recs, setRecs] = useState<Rec[]>(() => [...recStore])
   useEffect(() => {
     setPos(0)
     setPlaying(false)
@@ -331,10 +419,131 @@ export function VoiceApp() {
           )}
         </div>
       ))}
-      <div className="vm-rec">
-        <span />
-      </div>
+      {recs.map((r) => (
+        <div key={r.id} className={`vm ${open === r.id ? 'open' : ''}`}>
+          <button className="vm-head" onClick={() => setOpen(open === r.id ? null : r.id)}>
+            <b>{t({ ko: `새로운 녹음 ${r.n}`, zh: `新錄音 ${r.n}` })}</b>
+            <small>
+              <span>{t(UI.today)}</span>
+              <span>{duration(r.seconds, lang)}</span>
+            </small>
+          </button>
+          {open === r.id && (
+            <div className="vm-body">
+              {r.url ? <audio className="vm-audio" src={r.url} controls /> : <p className="muted">{t({ ko: '마이크 권한이 없어 소리 없이 저장됐어요.', zh: '沒有麥克風權限，已存成無聲檔。' })}</p>}
+            </div>
+          )}
+        </div>
+      ))}
+      <Recorder
+        onSaved={(r) => {
+          recStore.push(r)
+          setRecs([...recStore])
+          setOpen(r.id)
+        }}
+      />
     </Page>
+  )
+}
+
+type Rec = { id: string; n: number; url: string | null; seconds: number }
+/** 앱을 닫았다 열어도 이번 방문 동안은 녹음이 남도록 모듈 단위로 보관 */
+const recStore: Rec[] = []
+
+function Recorder({ onSaved }: { onSaved: (r: Rec) => void }) {
+  const { t } = useLang()
+  const [on, setOn] = useState(false)
+  const [sec, setSec] = useState(0)
+  const [levels, setLevels] = useState<number[]>([])
+  const rec = useRef<{ mr?: MediaRecorder; stream?: MediaStream; chunks: Blob[]; raf?: number; ctx?: AudioContext; start: number }>({ chunks: [], start: 0 })
+
+  useEffect(() => {
+    if (!on) return
+    const id = window.setInterval(() => setSec(Math.floor((Date.now() - rec.current.start) / 1000)), 250)
+    return () => window.clearInterval(id)
+  }, [on])
+
+  useEffect(() => () => stopAll(), [])
+
+  const stopAll = () => {
+    const r = rec.current
+    if (r.raf) cancelAnimationFrame(r.raf)
+    r.stream?.getTracks().forEach((tr) => tr.stop())
+    void r.ctx?.close().catch(() => {})
+  }
+
+  const start = async () => {
+    rec.current = { chunks: [], start: Date.now() }
+    setSec(0)
+    setLevels([])
+    setOn(true)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mr = new MediaRecorder(stream)
+      mr.ondataavailable = (e) => rec.current.chunks.push(e.data)
+      mr.start()
+      const ctx = new AudioContext()
+      const an = ctx.createAnalyser()
+      an.fftSize = 256
+      ctx.createMediaStreamSource(stream).connect(an)
+      const buf = new Uint8Array(an.frequencyBinCount)
+      const loop = () => {
+        an.getByteTimeDomainData(buf)
+        let peak = 0
+        for (const v of buf) peak = Math.max(peak, Math.abs(v - 128))
+        setLevels((l) => [...l.slice(-44), Math.min(1, peak / 64)])
+        rec.current.raf = requestAnimationFrame(loop)
+      }
+      loop()
+      Object.assign(rec.current, { mr, stream, ctx })
+    } catch {
+      // 권한이 없으면 가짜 파형으로만 녹음 흉내
+      const fake = () => {
+        setLevels((l) => [...l.slice(-44), 0.15 + Math.random() * 0.5])
+        rec.current.raf = window.setTimeout(fake, 90) as unknown as number
+      }
+      fake()
+    }
+  }
+
+  const stop = () => {
+    const r = rec.current
+    const seconds = Math.max(1, Math.round((Date.now() - r.start) / 1000))
+    const n = recStore.length + 1
+    const id = `rec-${Date.now()}`
+    setOn(false)
+    if (r.mr && r.mr.state !== 'inactive') {
+      r.mr.onstop = () => {
+        const url = URL.createObjectURL(new Blob(r.chunks, { type: r.mr?.mimeType || 'audio/webm' }))
+        onSaved({ id, n, url, seconds })
+      }
+      r.mr.stop()
+    } else {
+      window.clearTimeout(r.raf)
+      onSaved({ id, n, url: null, seconds })
+    }
+    stopAll()
+  }
+
+  return (
+    <div className={`vm-recorder ${on ? 'on' : ''}`}>
+      {on && (
+        <>
+          <b>{t({ ko: '새로운 녹음', zh: '新錄音' })}</b>
+          <small>
+            {pad(Math.floor(sec / 60))}:{pad(sec % 60)}
+          </small>
+          <div className="vm-live">
+            {levels.map((v, i) => (
+              <i key={i} style={{ height: `${8 + v * 92}%` }} />
+            ))}
+          </div>
+        </>
+      )}
+      <button className="vm-rec" onClick={on ? stop : start} aria-label={on ? 'stop' : 'record'}>
+        <span className={on ? 'stop' : ''} />
+      </button>
+    </div>
   )
 }
 

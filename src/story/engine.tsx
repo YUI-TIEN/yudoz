@@ -3,6 +3,7 @@ import type { L } from '../i18n'
 import { ms } from '../time'
 import { playPing } from '../sound'
 import type { Action, AppId, ChatMsg, PhoneStory, ReplyBranch, Room } from './types'
+import { PEOPLE, pickReply } from './personas'
 
 export type Screen = { kind: 'lock' } | { kind: 'passcode' } | { kind: 'home' } | { kind: 'app'; app: AppId }
 
@@ -25,12 +26,14 @@ type Progress = {
   calls: { at: string; contactId: string; type: 'incoming' | 'outgoing' | 'missed'; seconds: number }[]
   /** 알림 센터·잠금화면에 쌓이는 알림 */
   notices: (Banner & { at: string })[]
+  /** 자유 대화에서 사람마다 몇 번 답했는지 */
+  freeCount: Record<string, number>
 }
 
 const GAP = 1400
 
 function initial(story: PhoneStory): Progress {
-  return { fired: [], done: [], added: [], readIds: [], readRooms: [], clock: story.startAt, pendingReply: null, seq: 1, calls: [], notices: [] }
+  return { fired: [], done: [], added: [], readIds: [], readRooms: [], clock: story.startAt, pendingReply: null, seq: 1, calls: [], notices: [], freeCount: {} }
 }
 
 function load(story: PhoneStory): Progress {
@@ -66,7 +69,10 @@ type Ctx = {
   openRoom: string | null
   setOpenRoom: (id: string | null) => void
   canReply: (room: string) => boolean
-  send: (room: string, text: string) => void
+  /** 스토리가 이 방에서 답을 기다리는 중인지 */
+  awaiting: (room: string) => boolean
+  send: (room: string, payload: string | { sticker: string } | { photo: L; src?: string }) => void
+  pushMessage: (contactId: string, text: L) => void
   banner: Banner | null
   dismissBanner: () => void
   call: Call | null
@@ -94,6 +100,8 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
   const timers = useRef<number[]>([])
   const running = useRef(new Set<string>())
   const pendingRoom = useRef<string | null>(null)
+  const early = useRef<Record<string, string>>({})
+  const resolveRef = useRef<(room: string, text: string) => void>(() => {})
 
   const commit = useCallback((next: Progress) => {
     ref.current = next
@@ -203,6 +211,12 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
             // 답장을 기다린다. send()가 분기를 확정하면 done 처리 후 이 트리거를 다시 진행한다.
             if (!ref.current.pendingReply) commit({ ...ref.current, pendingReply: { actionId: aid, room: a.room, branches: a.branches } })
             running.current.delete(triggerId)
+            // 스크립트가 말하는 도중에 사용자가 먼저 답을 보냈으면 그걸로 판정한다
+            if (early.current[a.room]) {
+              const tx = early.current[a.room]
+              delete early.current[a.room]
+              later(() => resolveRef.current(a.room, tx), 900)
+            }
             return
           case 'call':
             setCall({ key: aid, from: a.from, lines: a.lines, declinedMsg: a.declinedMsg, state: 'ringing' })
@@ -255,20 +269,85 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
     emit(`open:${id}`)
   }
 
-  const send = (room: string, raw: string) => {
-    const text = raw.trim()
+  /** 보낸 메시지 내용: 글자, 이모티콘, 사진 */
+  type Payload = string | { sticker: string } | { photo: L; src?: string }
+
+  // 아직 진행 중인 스크립트가 이 방에 메시지를 보낼 예정이면 자유 대화 답장은 하지 않는다
+  const scriptBusy = (room: string) =>
+    story.script.some(
+      (tg) =>
+        ref.current.fired.includes(tg.id) &&
+        tg.actions.some((a, i) => !ref.current.done.includes(`${tg.id}#${i}`) && 'room' in a && a.room === room),
+    )
+
+  const freeTimers = useRef<Record<string, number>>({})
+
+  const freeReply = (room: string, lastKind: 'text' | 'sticker' | 'photo', lastText: string) => {
+    const roomDef = story.rooms.find((x) => x.id === room)
+    if (!roomDef || scriptBusy(room)) return
+    const people = PEOPLE[story.id] ?? {}
+    // 1:1이면 상대, 단톡이면 한두 명
+    const candidates = roomDef.contactId ? [roomDef.contactId] : (roomDef.group?.members ?? [])
+    const p0 = ref.current
+    const responders = roomDef.contactId ? candidates : candidates.filter((_, i) => (p0.seq + i) % 3 === 0).slice(0, 2)
+    if (!responders.length && candidates.length) responders.push(candidates[p0.seq % candidates.length])
+    // 읽음 처리
+    later(() => {
+      const q = ref.current
+      commit({ ...q, added: q.added.map((m) => (m.room === room && m.from === 'me' ? { ...m, unreadByThem: false } : m)) })
+    }, 900 + Math.random() * 900)
+    let t = 2200
+    responders.forEach((who) => {
+      const persona = people[who]
+      if (!persona) return
+      const n = ref.current.freeCount[who] ?? 0
+      const lines = lastKind === 'sticker' ? persona.sticker[n % persona.sticker.length] : lastKind === 'photo' ? persona.photo[n % persona.photo.length] : pickReply(persona, lastText, n)
+      commit({ ...ref.current, freeCount: { ...ref.current.freeCount, [who]: n + 1 } })
+      lines.forEach((line, i) => {
+        const id = `free-${room}-${who}-${n}-${i}`
+        later(() => deliver(id, room, who, { text: line }), t + i * 1300)
+      })
+      t += lines.length * 1300 + 600
+    })
+  }
+
+  const send = (room: string, payload: Payload) => {
     const p = ref.current
-    if (!text || p.pendingReply?.room !== room) return
+    const text = typeof payload === 'string' ? payload.trim() : ''
+    if (typeof payload === 'string' && !text) return
     const id = `me-${p.seq}`
-    const msg: LiveMsg = { id, room, from: 'me', at: p.clock, seq: p.seq, text, unreadByThem: true }
-    const branch = matchBranch(p.pendingReply.branches, text)
-    if (!branch) {
-      // 조건에 맞지 않으면 상대가 읽지 않는다
+    const content = typeof payload === 'string' ? { text } : payload
+    const msg = { id, room, from: 'me', at: p.clock, seq: p.seq, unreadByThem: true, ...content } as LiveMsg
+
+    // 스토리가 답을 기다리는 방
+    if (p.pendingReply?.room === room) {
       commit({ ...p, seq: p.seq + 1, added: [...p.added, msg] })
+      if (text) resolvePending(room, text)
       return
     }
+
+    // 스크립트가 아직 이 방에서 말하는 중이면, 답을 기다리기 시작할 때 판정하도록 보관
+    if (scriptBusy(room)) {
+      commit({ ...p, seq: p.seq + 1, added: [...p.added, msg] })
+      if (text) early.current[room] = text
+      return
+    }
+
+    // 자유 대화: 연달아 보내면 마지막 메시지에 한 번만 답한다
+    commit({ ...p, seq: p.seq + 1, added: [...p.added, msg] })
+    window.clearTimeout(freeTimers.current[room])
+    const kind = typeof payload === 'string' ? 'text' : 'sticker' in payload ? 'sticker' : 'photo'
+    freeTimers.current[room] = window.setTimeout(() => freeReply(room, kind, text), 1600)
+  }
+
+  /** 기다리던 답을 판정한다. 맞지 않으면 상대가 읽지 않은 채로 둔다. */
+  const resolvePending = (room: string, text: string) => {
+    const p = ref.current
+    if (p.pendingReply?.room !== room) return
+    const branch = matchBranch(p.pendingReply.branches, text)
+    if (!branch) return
     const pending = p.pendingReply
-    commit({ ...p, seq: p.seq + 1, added: [...p.added, msg], pendingReply: null })
+    commit({ ...p, pendingReply: null })
     later(() => {
       const q = ref.current
       commit({ ...q, added: q.added.map((m) => (m.room === room && m.from === 'me' ? { ...m, unreadByThem: false } : m)) })
@@ -286,6 +365,13 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
       emit(`branch:${room}:${branch.id}`)
       resume(pending.actionId)
     }, 1800 + branch.replies.length * GAP + 400)
+  }
+  resolveRef.current = resolvePending
+
+  /** 전화·FaceTime 뒤 등에 상대가 보내는 카톡 */
+  const pushMessage = (contactId: string, text: L) => {
+    const room = story.rooms.find((r) => r.contactId === contactId)
+    if (room) deliver(`push-${contactId}-${ref.current.seq}-${Date.now()}`, room.id, contactId, { text })
   }
 
   const finishCallAction = (type: 'incoming' | 'missed', seconds: number) => {
@@ -349,8 +435,10 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
     totalUnread: Object.values(unreadByRoom).reduce((a, b) => a + b, 0),
     openRoom,
     setOpenRoom,
-    canReply: (room) => progress.pendingReply?.room === room,
+    canReply: () => true,
+    awaiting: (room) => progress.pendingReply?.room === room,
     send,
+    pushMessage,
     banner,
     dismissBanner: () => setBanner(null),
     call,

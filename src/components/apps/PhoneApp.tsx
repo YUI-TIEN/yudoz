@@ -179,7 +179,7 @@ function ContactCard({ id, onBack, bottom }: { id: string; onBack: () => void; b
             <G n="phoneFill" size={20} />
             <span>{t(UI.phone)}</span>
           </button>
-          <button>
+          <button onClick={() => dial(id, true)}>
             <G n="video" size={20} />
             <span>FaceTime</span>
           </button>
