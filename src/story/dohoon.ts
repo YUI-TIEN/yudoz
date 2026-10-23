@@ -1,5 +1,6 @@
 import { kst } from '../time'
 import type { ChatMsg, PhoneStory } from './types'
+import { dohoonExtra } from './dohoonExtra'
 
 /** [시각, 보낸 사람, 한국어, 중국어] */
 type Row = [string, string, string, string]
@@ -346,6 +347,8 @@ export const dohoon: PhoneStory = {
     { time: '00:00', label: { ko: '형한테 먼저 보내기', zh: '先傳給哥' }, on: true },
     { time: '07:30', label: { ko: '(주말) 볼링', zh: '（週末）保齡球' }, on: false },
   ],
+
+  extra: dohoonExtra,
 
   script: [
     {

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useLang, UI, type L } from '../../i18n'
 import { useStory } from '../../story/engine'
-import { useDevice, WALLPAPERS } from '../../device'
+import { SECRETS, SECRET_LABEL, useDevice, WALLPAPERS } from '../../device'
+import { canFullscreen, enterFullscreen, exitFullscreen, isFullscreen } from '../../fullscreen'
 import { Avatar, Cell, Group, Page, Toggle } from '../common'
 import { WALLPAPER_PREVIEWS } from '../../wallpapers'
 import { G } from '../icons'
@@ -10,7 +11,8 @@ type Sub = null | 'wifi' | 'bt' | 'sound' | 'focus' | 'general' | 'about' | 'lan
 
 export function SettingsApp({ onExit }: { onExit: () => void }) {
   const { story, restart, setScreen } = useStory()
-  const { s, set } = useDevice()
+  const { s, set, found } = useDevice()
+  const [fs, setFs] = useState(isFullscreen())
   const { t, lang, setLang } = useLang()
   const [sub, setSub] = useState<Sub>(null)
   const [sub2, setSub2] = useState<Sub>(null)
@@ -223,7 +225,35 @@ export function SettingsApp({ onExit }: { onExit: () => void }) {
         <Cell icon="battery" iconBg="#34c759" title={t({ ko: '배터리', zh: '電池' })} chevron onClick={() => setSub('battery')} />
         <Cell icon="hand" iconBg="#007aff" title={t({ ko: '개인정보 보호 및 보안', zh: '隱私權與安全性' })} chevron />
       </Group>
+      <Group header={{ ko: '발견한 비밀', zh: '發現的祕密' }} footer={{ ko: '폰 곳곳에 숨겨진 비밀을 찾아보세요. 힌트는 다른 앱 안에 있어요.', zh: '找找看藏在手機各處的祕密。提示就在其他 App 裡。' }}>
+        <Cell
+          icon="unlock"
+          iconBg="#af52de"
+          title={t({ ko: `${found.length} / ${SECRETS.length}`, zh: `${found.length} / ${SECRETS.length}` })}
+          detail={<span className="secret-dots">{SECRETS.map((id) => (found.includes(id) ? '●' : '○')).join(' ')}</span>}
+        />
+        {SECRETS.filter((id) => found.includes(id)).map((id) => (
+          <Cell key={id} title={t(SECRET_LABEL[id])} right={<G n="check" size={18} w={2.6} className="tint" />} />
+        ))}
+      </Group>
       <Group header={{ ko: '이 웹사이트', zh: '本網站' }} footer={UI.aboutText}>
+        {canFullscreen() && (
+          <Cell
+            icon="expand"
+            iconBg="#007aff"
+            title={t({ ko: '전체 화면', zh: '全螢幕' })}
+            right={
+              <Toggle
+                on={fs}
+                onChange={async (v) => {
+                  if (v) await enterFullscreen()
+                  else await exitFullscreen()
+                  setFs(isFullscreen())
+                }}
+              />
+            }
+          />
+        )}
         <Cell icon="lock" iconBg="#636366" title={t(UI.toLock)} onClick={() => setScreen({ kind: 'lock' })} />
         <Cell icon="rewind" iconBg="#ff3b30" title={t(UI.restart)} onClick={restart} danger />
         <Cell icon="phone" iconBg="#34c759" title={t(UI.toSelect)} onClick={onExit} />

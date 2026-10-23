@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useLang, UI } from '../../i18n'
 import { duration, fullDate, listDate, monthDay, ms, time, pad } from '../../time'
 import { useStory } from '../../story/engine'
-import { useBackHandler } from '../../device'
+import { useBackHandler, useDevice } from '../../device'
 import { Page } from '../common'
 import { StatusBar, WD, kstParts } from '../system'
 import { G } from '../icons'
@@ -13,8 +13,51 @@ export function NotesApp() {
   const { t, lang } = useLang()
   const [inFolder, setInFolder] = useState(true)
   const [open, setOpen] = useState<string | null>(null)
+  const { discover, found, haptic } = useDevice()
+  const [pw, setPw] = useState('')
+  const [pwErr, setPwErr] = useState(false)
   const note = story.notes.find((n) => n.id === open)
   const tint = '#e5a800'
+  const locked = story.extra.lockedNote
+  const unlocked = found.includes('locked-note')
+
+  if (open === 'locked')
+    return (
+      <Page title="" onBack={() => setOpen(null)} backLabel={UI.notes} tint={tint} bg="#fff">
+        {unlocked ? (
+          <div className="n-body">
+            <small>{`${fullDate(locked.at, lang)} ${time(locked.at, lang)}`}</small>
+            <pre>{t(locked.body)}</pre>
+          </div>
+        ) : (
+          <form
+            className="n-lock"
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (pw === locked.password) {
+                discover('locked-note')
+                setPwErr(false)
+              } else {
+                setPwErr(true)
+                haptic(120)
+              }
+              setPw('')
+            }}
+          >
+            <G n="lock" size={44} w={1.6} className="tint" />
+            <h3>{t({ ko: '이 메모는 잠겨 있습니다.', zh: '此備忘錄已上鎖。' })}</h3>
+            <p>{t({ ko: '메모 암호를 입력하여 이 메모를 보십시오.', zh: '輸入備忘錄密碼以檢視此備忘錄。' })}</p>
+            <input className={pwErr ? 'err' : ''} type="password" inputMode="numeric" autoFocus value={pw} onChange={(e) => setPw(e.target.value)} placeholder={t({ ko: '암호', zh: '密碼' })} />
+            <small>
+              {t({ ko: '힌트: ', zh: '提示：' })}
+              {t(locked.hint)}
+            </small>
+            {pwErr && <small className="red">{t({ ko: '암호가 올바르지 않습니다.', zh: '密碼不正確。' })}</small>}
+            <button className="n-lock-btn">{t({ ko: '확인', zh: '確定' })}</button>
+          </form>
+        )}
+      </Page>
+    )
 
   if (note)
     return (
@@ -90,7 +133,7 @@ export function NotesApp() {
       bottom={
         <div className="n-toolbar">
           <span />
-          <small>{t({ ko: `메모 ${story.notes.length}개`, zh: `${story.notes.length} 則備忘錄` })}</small>
+          <small>{t({ ko: `메모 ${story.notes.length + 1}개`, zh: `${story.notes.length + 1} 則備忘錄` })}</small>
           <G n="compose" size={22} />
         </div>
       }
@@ -100,7 +143,15 @@ export function NotesApp() {
           <h3 className="group-h big">
             <G n="pin" size={14} /> {t({ ko: '고정됨', zh: '已釘選' })}
           </h3>
-          <div className="group-box">{pinned.map(row)}</div>
+          <div className="group-box">
+            {pinned.map(row)}
+            <button className="n-row" onClick={() => setOpen('locked')}>
+              <b>{unlocked ? t(locked.title) : t({ ko: '🔒 잠김', zh: '🔒 已上鎖' })}</b>
+              <small>
+                <em>{listDate(locked.at, clock, lang)}</em> {t({ ko: '잠김', zh: '已上鎖' })}
+              </small>
+            </button>
+          </div>
         </>
       )}
       <h3 className="group-h big">{t({ ko: '이전 30일', zh: '過去 30 天' })}</h3>

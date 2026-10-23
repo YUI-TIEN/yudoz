@@ -25,12 +25,16 @@ import { CameraApp } from './components/apps/Camera'
 import { ClockApp } from './components/apps/Clock'
 import { SettingsApp } from './components/apps/Settings'
 import { AiApp, CalendarApp, NotesApp, SearchApp, VoiceApp } from './components/apps/Others'
+import { InstagramApp, XApp } from './components/apps/Social'
+import { MailApp, MapsApp, MusicApp, WeatherApp } from './components/apps/Media'
+import { SECRETS, SECRET_LABEL, type SecretId } from './device'
+import { canFullscreen, enterFullscreen, isIOS, isStandalone } from './fullscreen'
 import { unlockAudio } from './sound'
 
 const STORIES: Record<string, PhoneStory> = { shinyu, dohoon }
 
 /** 상단·하단이 어두운 앱 (홈 인디케이터를 흰색으로) */
-const DARK_APPS: AppId[] = ['camera', 'voice', 'clock']
+const DARK_APPS: AppId[] = ['camera', 'voice', 'clock', 'weather', 'x']
 
 type Origin = { x: number; y: number; w: number; h: number }
 
@@ -55,6 +59,12 @@ function Screens({ onExit, frame }: { onExit: () => void; frame: React.RefObject
     settings: () => <SettingsApp onExit={onExit} />,
     camera: () => <CameraApp />,
     clock: () => <ClockApp />,
+    instagram: () => <InstagramApp />,
+    x: () => <XApp />,
+    music: () => <MusicApp />,
+    maps: () => <MapsApp />,
+    mail: () => <MailApp />,
+    weather: () => <WeatherApp />,
   }
 
   const openApp = (app: AppId, rect: DOMRect) => {
@@ -135,6 +145,25 @@ function Screens({ onExit, frame }: { onExit: () => void; frame: React.RefObject
       <OutgoingCall />
       <CallScreen />
       {flashlight && <div className="flash-glow" />}
+      <SecretToast />
+    </div>
+  )
+}
+
+function SecretToast() {
+  const { toast } = useDevice()
+  const { t } = useLang()
+  if (!toast) return null
+  const [id, n] = toast.split('|')
+  return (
+    <div className="secret-toast" key={toast}>
+      <span>🔓</span>
+      <span>
+        <b>{t({ ko: '비밀을 발견했어요', zh: '發現了祕密' })}</b>
+        <small>
+          {t(SECRET_LABEL[id as SecretId])} · {n}/{SECRETS.length}
+        </small>
+      </span>
     </div>
   )
 }
@@ -155,6 +184,13 @@ function LangToggle() {
 
 function Select({ onPick }: { onPick: (id: string) => void }) {
   const { t } = useLang()
+  const [iosHint, setIosHint] = useState(false)
+  const fs = canFullscreen()
+  const pick = (id: string) => {
+    // 모바일에서는 고르는 순간 전체 화면으로 (사용자 제스처 안에서만 가능)
+    if (fs && window.matchMedia('(pointer: coarse)').matches) void enterFullscreen()
+    onPick(id)
+  }
   return (
     <div className="select">
       <LangToggle />
@@ -162,7 +198,7 @@ function Select({ onPick }: { onPick: (id: string) => void }) {
       <h1>{t({ ko: '주운 폰은 누구 거?', zh: '撿到的手機是誰的？' })}</h1>
       <div className="select-cards">
         {[shinyu, dohoon].map((s) => (
-          <button key={s.id} className="select-card" onClick={() => onPick(s.id)}>
+          <button key={s.id} className="select-card" onClick={() => pick(s.id)}>
             <span className="select-phone" style={{ background: s.wallpaper }}>
               <span className="select-island" />
               <span className="select-time">{s.id === 'shinyu' ? '23:58' : '23:57'}</span>
@@ -173,6 +209,30 @@ function Select({ onPick }: { onPick: (id: string) => void }) {
           </button>
         ))}
       </div>
+      {!isStandalone() && (
+        <button className="select-fs" onClick={() => (fs ? void enterFullscreen() : setIosHint(true))}>
+          ⛶ {t({ ko: '전체 화면으로 보기', zh: '以全螢幕觀看' })}
+        </button>
+      )}
+      {iosHint && (
+        <div className="ios-hint" onClick={() => setIosHint(false)}>
+          <div onClick={(e) => e.stopPropagation()}>
+            <b>{t({ ko: 'iPhone에서 전체 화면으로 보기', zh: '在 iPhone 上以全螢幕觀看' })}</b>
+            <p>
+              {t({
+                ko: 'iPhone Safari는 웹사이트 전체 화면을 지원하지 않아요. 아래 방법으로 홈 화면에 추가하면 앱처럼 전체 화면으로 열려요.',
+                zh: 'iPhone 的 Safari 不支援網站全螢幕。照下面的方法加入主畫面，就能像 App 一樣全螢幕開啟。',
+              })}
+            </p>
+            <ol>
+              <li>{t({ ko: '하단의 공유 버튼 (□↑) 누르기', zh: '點下方的分享按鈕（□↑）' })}</li>
+              <li>{t({ ko: '"홈 화면에 추가" 선택', zh: '選擇「加入主畫面」' })}</li>
+              <li>{t({ ko: '홈 화면에 생긴 아이콘으로 열기', zh: '從主畫面新出現的圖示打開' })}</li>
+            </ol>
+            <button onClick={() => setIosHint(false)}>{t({ ko: '확인', zh: '知道了' })}</button>
+          </div>
+        </div>
+      )}
       <p className="select-tip">{t({ ko: '화면을 위로 쓸어올려 잠금을 풀고, 위에서 끌어내리면 제어 센터가 열려요.', zh: '向上滑動解鎖；從右上角往下拉可以打開控制中心。' })}</p>
       <p className="select-foot">
         {t({
@@ -195,6 +255,12 @@ export default function App() {
     history.replaceState(null, '', pick ? `#${pick}` : window.location.pathname)
     document.title = pick === 'shinyu' ? '신유의 iPhone' : pick === 'dohoon' ? '도훈의 iPhone' : '유도즈의 iPhone'
   }, [pick])
+
+  useEffect(() => {
+    // 홈 화면 앱(iOS)에서는 실제 상태바가 화면 위에 겹치므로 가짜 상태바 글자를 숨긴다
+    if (isIOS() && isStandalone()) document.documentElement.classList.add('native-status')
+    if (isStandalone()) document.documentElement.classList.add('standalone')
+  }, [])
 
   useEffect(() => {
     window.addEventListener('pointerdown', unlockAudio, { once: true })

@@ -1,6 +1,24 @@
 import type { L } from '../i18n'
 
-export type AppId = 'kakao' | 'messages' | 'phone' | 'photos' | 'notes' | 'search' | 'ai' | 'calendar' | 'voice' | 'settings' | 'camera' | 'clock'
+export type AppId =
+  | 'kakao'
+  | 'messages'
+  | 'phone'
+  | 'photos'
+  | 'notes'
+  | 'search'
+  | 'ai'
+  | 'calendar'
+  | 'voice'
+  | 'settings'
+  | 'camera'
+  | 'clock'
+  | 'instagram'
+  | 'x'
+  | 'music'
+  | 'maps'
+  | 'mail'
+  | 'weather'
 
 export type Contact = {
   name: L
@@ -89,5 +107,63 @@ export type PhoneStory = {
   calendar: CalEvent[]
   voice: VoiceMemo[]
   alarms: Alarm[]
+  extra: Extras
   script: Trigger[]
+}
+
+/* ---------- 스토리 밖의 생활감 콘텐츠 ---------- */
+
+export type Pic = { emoji: string; tint: string; src?: string }
+
+export type IgUser = { name: L; bio?: L; avatar?: string; posts: number; followers: string; following: string; verified?: boolean }
+export type IgPost = { id: string; by: string; pic: Pic; caption: L; likes: number; at: string; comments: { by: string; text: L }[] }
+export type IgStory = { by: string; frames: (Pic & { text?: L })[] }
+export type IgDm = { with: string; messages: { from: string; text: L; at: string }[] }
+export type Instagram = {
+  me: string
+  users: Record<string, IgUser>
+  feed: IgPost[]
+  stories: IgStory[]
+  highlights: { title: L; frames: (Pic & { text?: L })[] }[]
+  dms: IgDm[]
+}
+
+export type Tweet = { id: string; by: string; text: L; at: string; likes: number; rts: number; replies: number; pic?: Pic }
+export type XAccount = { name: L; bio: L; locked?: boolean; followers: string; following: string; avatar?: string }
+export type XData = {
+  /** 내 계정들. 첫 번째가 기본, 두 번째가 비밀 계정 */
+  mine: string[]
+  accounts: Record<string, XAccount>
+  timeline: Tweet[]
+  posts: Record<string, Tweet[]>
+  trends: { tag: L; count: L }[]
+}
+
+export type Song = { title: string; artist: string; dur: number }
+export type Playlist = { id: string; title: L; by: L; pic: Pic; songs: Song[] }
+
+export type Place = { id: string; name: L; x: number; y: number; emoji: string; note: L; kind: L }
+export type Mail = { id: string; from: string; subject: L; body: L; at: string; unread?: boolean; box?: 'inbox' | 'draft' }
+
+export type Weather = {
+  city: L
+  now: number
+  desc: L
+  hi: number
+  lo: number
+  hours: [string, string, number][]
+  days: [L, string, number, number][]
+}
+
+export type Extras = {
+  instagram: Instagram
+  x: XData
+  music: Playlist[]
+  places: Place[]
+  mails: Mail[]
+  weather: Weather
+  /** 잠긴 메모: 비밀번호 + 힌트 */
+  lockedNote: { title: L; password: string; hint: L; body: L; at: string }
+  hiddenPhotos: Photo[]
+  deletedPhotos: Photo[]
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLang, UI, type L } from '../../i18n'
 import { fullDate, ms, time } from '../../time'
 import { useStory } from '../../story/engine'
@@ -18,12 +18,13 @@ const TABS = [
 
 export function PhotosApp() {
   const { story, clock } = useStory()
-  const { shots } = useDevice()
+  const { shots, discover, found } = useDevice()
+  const [unlocking, setUnlocking] = useState(false)
   const { t, lang } = useLang()
   const [tab, setTab] = useState('library')
   const [open, setOpen] = useState<{ list: Item[]; i: number } | null>(null)
   const [favs, setFavs] = useState<string[]>([])
-  const [album, setAlbum] = useState<'recent' | 'fav' | null>(null)
+  const [album, setAlbum] = useState<'recent' | 'fav' | 'hidden' | 'deleted' | null>(null)
 
   const items: Item[] = [
     ...story.photos,
@@ -43,6 +44,30 @@ export function PhotosApp() {
       ))}
     </div>
   )
+
+  if (unlocking)
+    return (
+      <PhotoLock
+        passcode={story.passcode}
+        onCancel={() => setUnlocking(false)}
+        onOk={() => {
+          setUnlocking(false)
+          setAlbum('hidden')
+          discover('hidden')
+        }}
+      />
+    )
+
+  if (album === 'hidden' || album === 'deleted') {
+    const list = album === 'hidden' ? story.extra.hiddenPhotos : story.extra.deletedPhotos
+    return (
+      <Page title={album === 'hidden' ? { ko: '가려진 항목', zh: '已隱藏' } : { ko: '최근 삭제된 항목', zh: '最近刪除' }} onBack={() => setAlbum(null)} backLabel={{ ko: '앨범', zh: '相簿' }} bg="#fff" bottom={bar}>
+        {album === 'deleted' && <p className="ph-del-note">{t({ ko: '항목은 영구적으로 삭제되기 전까지 최대 30일 동안 표시됩니다.', zh: '項目會在永久刪除前最多顯示 30 天。' })}</p>}
+        {grid(list)}
+        {album === 'deleted' && <p className="ph-count red">{t({ ko: '29일 남음', zh: '剩 29 天' })}</p>}
+      </Page>
+    )
+  }
 
   if (album) {
     const list = album === 'fav' ? items.filter((p) => favs.includes(p.id)) : items
@@ -68,6 +93,26 @@ export function PhotosApp() {
               </button>
             )
           })}
+        </div>
+        <h3 className="group-h big">{t({ ko: '기타', zh: '其他' })}</h3>
+        <div className="group-box flat">
+          <button className="cell" onClick={() => (found.includes('hidden') ? setAlbum('hidden') : setUnlocking(true))}>
+            <G n="eyeSlash" size={22} className="tint" />
+            <span className="cell-main">{t({ ko: '가려진 항목', zh: '已隱藏' })}</span>
+            <G n="lock" size={14} className="cell-chev" />
+          </button>
+          <button
+            className="cell"
+            onClick={() => {
+              setAlbum('deleted')
+              discover('deleted')
+            }}
+          >
+            <G n="trash" size={22} className="tint" />
+            <span className="cell-main">{t({ ko: '최근 삭제된 항목', zh: '最近刪除' })}</span>
+            <span className="cell-detail">{story.extra.deletedPhotos.length}</span>
+            <G n="chevron" size={15} w={2.6} className="cell-chev" />
+          </button>
         </div>
       </Page>
     )
@@ -189,6 +234,66 @@ function Viewer({ list, start, favs, setFavs, onClose }: { list: Item[]; start: 
         </button>
         <G n="trash" size={24} />
       </div>
+    </div>
+  )
+}
+
+/** 가려진 항목: Face ID 실패 → 암호 입력 */
+function PhotoLock({ passcode, onOk, onCancel }: { passcode: string; onOk: () => void; onCancel: () => void }) {
+  const { t } = useLang()
+  const [stage, setStage] = useState<'face' | 'code'>('face')
+  const [code, setCode] = useState('')
+  const [shake, setShake] = useState(false)
+  useBackHandler(true, onCancel)
+  useEffect(() => {
+    const id = window.setTimeout(() => setStage('code'), 1300)
+    return () => window.clearTimeout(id)
+  }, [])
+  const press = (d: string) => {
+    const next = (code + d).slice(0, 4)
+    setCode(next)
+    if (next.length < 4) return
+    if (next === passcode) window.setTimeout(onOk, 150)
+    else {
+      setShake(true)
+      window.setTimeout(() => {
+        setShake(false)
+        setCode('')
+      }, 500)
+    }
+  }
+  return (
+    <div className="ph-lock">
+      <StatusBar />
+      {stage === 'face' ? (
+        <div className="ph-face">
+          <span className="faceid" />
+          <p>Face ID</p>
+        </div>
+      ) : (
+        <>
+          <p className="ph-lock-title">{t({ ko: '가려진 앨범을 보려면 iPhone 암호를 입력하십시오', zh: '輸入 iPhone 密碼以檢視隱藏的相簿' })}</p>
+          <div className={`pc-dots dark ${shake ? 'shake' : ''}`}>
+            {[0, 1, 2, 3].map((i) => (
+              <span key={i} className={i < code.length ? 'on' : ''} />
+            ))}
+          </div>
+          <div className="kp-grid ph-kp">
+            {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].map((d, i) =>
+              d === '' ? (
+                <span key={i} />
+              ) : (
+                <button key={i} onClick={() => (d === '⌫' ? setCode((c) => c.slice(0, -1)) : press(d))} className={d === '⌫' ? 'kp-del' : ''}>
+                  <b>{d}</b>
+                </button>
+              ),
+            )}
+          </div>
+          <button className="ph-lock-cancel" onClick={onCancel}>
+            {t({ ko: '취소', zh: '取消' })}
+          </button>
+        </>
+      )}
     </div>
   )
 }

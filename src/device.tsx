@@ -31,6 +31,18 @@ const DEFAULTS: DeviceSettings = {
 }
 
 export type Shot = { id: string; src: string; at: number }
+export type NowPlaying = { playlist: string; index: number; playing: boolean; pos: number }
+
+/** 찾을 수 있는 비밀들 */
+export const SECRETS = ['x-diary', 'locked-note', 'hidden', 'deleted', 'draft'] as const
+export type SecretId = (typeof SECRETS)[number]
+export const SECRET_LABEL: Record<SecretId, { ko: string; zh: string }> = {
+  'x-diary': { ko: 'X 비밀 계정', zh: 'X 祕密帳號' },
+  'locked-note': { ko: '잠긴 메모', zh: '上鎖的備忘錄' },
+  hidden: { ko: '가려진 앨범', zh: '隱藏的相簿' },
+  deleted: { ko: '최근 삭제된 사진', zh: '最近刪除的照片' },
+  draft: { ko: '보내지 않은 메일', zh: '沒寄出的郵件' },
+}
 export type Overlay = 'none' | 'control' | 'notifications'
 
 type DeviceCtx = {
@@ -48,6 +60,11 @@ type DeviceCtx = {
   goBack: () => boolean
   outgoing: string | null
   dial: (contactIdOrNumber: string | null) => void
+  found: SecretId[]
+  discover: (id: SecretId) => void
+  toast: string | null
+  now: NowPlaying | null
+  setNow: (n: NowPlaying | null | ((p: NowPlaying | null) => NowPlaying | null)) => void
   haptic: (ms?: number) => void
 }
 
@@ -69,6 +86,41 @@ export function DeviceProvider({ storyId, children }: { storyId: string; childre
   const [shots, setShots] = useState<Shot[]>([])
   const [outgoing, setOutgoing] = useState<string | null>(null)
   const backs = useRef<(() => void)[]>([])
+  const foundKey = `yudoz-found-${storyId}`
+  const [found, setFound] = useState<SecretId[]>(() => {
+    try {
+      return JSON.parse(window.localStorage.getItem(foundKey) ?? '[]') as SecretId[]
+    } catch {
+      return []
+    }
+  })
+  const [toast, setToast] = useState<string | null>(null)
+  const [now, setNow] = useState<NowPlaying | null>(null)
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(foundKey, JSON.stringify(found))
+    } catch {
+      // 무시
+    }
+  }, [found, foundKey])
+
+  // 재생 중이면 1초마다 위치를 올리고, 곡이 끝나면 다음 곡으로
+  useEffect(() => {
+    if (!now?.playing) return
+    const id = window.setInterval(() => setNow((n) => (n ? { ...n, pos: n.pos + 1 } : n)), 1000)
+    return () => window.clearInterval(id)
+  }, [now?.playing])
+
+  const discover = useCallback((id: SecretId) => {
+    setFound((list) => {
+      if (list.includes(id)) return list
+      const next = [...list, id]
+      setToast(`${id}|${next.length}`)
+      window.setTimeout(() => setToast(null), 2600)
+      return next
+    })
+  }, [])
 
   useEffect(() => {
     try {
@@ -124,6 +176,11 @@ export function DeviceProvider({ storyId, children }: { storyId: string; childre
     },
     outgoing,
     dial: setOutgoing,
+    found,
+    discover,
+    toast,
+    now,
+    setNow,
     haptic,
   }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

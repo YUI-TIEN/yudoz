@@ -284,6 +284,40 @@ const PATHS: Record<string, React.ReactNode> = {
       <path d="m16 10.5 5.5-3.5v10L16 13.5" />
     </>
   ),
+  home: <path d="M3.5 11 12 3.5l8.5 7.5V20a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z" />,
+  plusSquare: (
+    <>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+      <path d="M12 8v8M8 12h8" />
+    </>
+  ),
+  send: <path d="M21 3 10 14M21 3l-7 18-4-7-7-4z" />,
+  bookmark: <path d="M6 3.5h12v17l-6-4.5-6 4.5z" />,
+  repeat: <path d="M17 2.5l3.5 3.5L17 9.5M20.5 6H8a4 4 0 0 0-4 4v1.5M7 21.5 3.5 18 7 14.5M3.5 18H16a4 4 0 0 0 4-4v-1.5" />,
+  chart: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
+  mail: (
+    <>
+      <rect x="2.5" y="5" width="19" height="14" rx="2.5" />
+      <path d="m3.5 6.5 8.5 6.5 8.5-6.5" />
+    </>
+  ),
+  shuffle: <path d="M3 7h3.5c2 0 3.3 1 4.4 2.7l2.2 3.6c1.1 1.7 2.4 2.7 4.4 2.7H21M18 13l3 3-3 3M3 17h3.5c1.3 0 2.3-.4 3.1-1.1M13.4 8.1c.8-.7 1.8-1.1 3.1-1.1H21M18 4l3 3-3 3" />,
+  location: <path fill="currentColor" stroke="none" d="M21 3 3 10.5l7.5 2.6L13 21z" />,
+  route: (
+    <>
+      <circle cx="6" cy="18" r="2.5" />
+      <circle cx="18" cy="6" r="2.5" />
+      <path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5" />
+    </>
+  ),
+  eyeSlash: (
+    <>
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="M4 4l16 16" />
+    </>
+  ),
+  expand: <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />,
   apps: <path d="M4.5 4.5h6v6h-6zM13.5 4.5h6v6h-6zM4.5 13.5h6v6h-6zM13.5 13.5h6v6h-6z" />,
 }
 
@@ -440,6 +474,62 @@ export function AppIcon({ id, day, weekday }: { id: AppId | 'camera' | 'clock'; 
           <circle cx="30" cy="32.5" r="6.5" fill="#1b2a44" />
           <circle cx="32" cy="30.5" r="1.8" fill="#9db2d8" />
           <circle cx="44.5" cy="24" r="1.6" fill="#f6c343" />
+        </Squircle>
+      )
+    case 'instagram':
+      return (
+        <Squircle
+          id="ig-insta"
+          bg={
+            <radialGradient id="ig-insta" cx="0.3" cy="1.07" r="1.3">
+              <stop offset="0" stopColor="#fdf497" />
+              <stop offset="0.1" stopColor="#fdf497" />
+              <stop offset="0.5" stopColor="#fd5949" />
+              <stop offset="0.68" stopColor="#d6249f" />
+              <stop offset="1" stopColor="#285AEB" />
+            </radialGradient>
+          }
+        >
+          <rect x="14" y="14" width="32" height="32" rx="9.5" fill="none" stroke="#fff" strokeWidth="3.6" />
+          <circle cx="30" cy="30" r="7.6" fill="none" stroke="#fff" strokeWidth="3.6" />
+          <circle cx="39.6" cy="20.4" r="2.2" fill="#fff" />
+        </Squircle>
+      )
+    case 'x':
+      return (
+        <Squircle id="ig-x" bg={lin('ig-x', '#000', '#000')}>
+          <path fill="#fff" d="M38.2 15h4.9L32.4 27.2 45 45h-9.8l-7.7-10.1L18.7 45h-4.9l11.4-13.1L13 15h10l7 9.2zm-1.7 27.1h2.7L21.7 17.8h-2.9z" />
+        </Squircle>
+      )
+    case 'music':
+      return (
+        <Squircle id="ig-music" bg={lin('ig-music', '#ff5e73', '#fa233b')}>
+          <path fill="#fff" d="M38.5 13.5v20.2a6 6 0 1 1-3-5.2V20.6l-11 2.6v14.6a6 6 0 1 1-3-5.2V18.2z" />
+        </Squircle>
+      )
+    case 'maps':
+      return (
+        <Squircle id="ig-maps" bg={lin('ig-maps', '#c9f0d0', '#a4e2b2')}>
+          <path d="M0 40 60 22v10L0 50z" fill="#fef3b5" />
+          <path d="M22 0h8l8 60h-8z" fill="#fff" />
+          <path d="M0 40 60 22" stroke="#7cc5f5" strokeWidth="4" />
+          <circle cx="40" cy="20" r="9" fill="#ff3b30" />
+          <circle cx="40" cy="20" r="3.4" fill="#fff" />
+          <path d="M40 29l-3-4h6z" fill="#ff3b30" />
+        </Squircle>
+      )
+    case 'mail':
+      return (
+        <Squircle id="ig-mail" bg={lin('ig-mail', '#5ac8fa', '#1e7cf2')}>
+          <rect x="11" y="18" width="38" height="25" rx="3.5" fill="#fff" />
+          <path d="M12.5 20 30 33l17.5-13" fill="none" stroke="#1e7cf2" strokeWidth="2.4" strokeLinejoin="round" opacity="0.5" />
+        </Squircle>
+      )
+    case 'weather':
+      return (
+        <Squircle id="ig-weather" bg={lin('ig-weather', '#4aa3f7', '#1d63d8')}>
+          <circle cx="24" cy="24" r="9" fill="#ffd33d" />
+          <path fill="#fff" d="M41 44H22a8 8 0 0 1-.6-16 10 10 0 0 1 19.2 2.2A7 7 0 0 1 41 44z" />
         </Squircle>
       )
     case 'clock':

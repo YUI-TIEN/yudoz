@@ -1,5 +1,6 @@
 import { kst } from '../time'
 import type { ChatMsg, PhoneStory } from './types'
+import { shinyuExtra } from './shinyuExtra'
 
 /** [시각, 보낸 사람, 한국어, 중국어] */
 type Row = [string, string, string, string]
@@ -427,6 +428,8 @@ export const shinyu: PhoneStory = {
     { time: '23:55', label: { ko: '케이크 꺼내기 (김치통 밑)', zh: '拿出蛋糕（泡菜盒下面）' }, on: true },
     { time: '00:00', label: { ko: '🐺 12시 땡 편지 보내기', zh: '🐺 十二點整傳信' }, on: true },
   ],
+
+  extra: shinyuExtra,
 
   script: [
     {

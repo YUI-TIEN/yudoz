@@ -301,6 +301,12 @@ const GRID: AppDef[] = [
   { id: 'search', label: { ko: '네이버', zh: 'NAVER' } },
   { id: 'ai', label: UI.ai },
   { id: 'settings', label: UI.settings },
+  { id: 'instagram', label: { ko: 'Instagram', zh: 'Instagram' } },
+  { id: 'x', label: 'X' },
+  { id: 'music', label: { ko: '음악', zh: '音樂' } },
+  { id: 'maps', label: { ko: '지도', zh: '地圖' } },
+  { id: 'mail', label: { ko: '메일', zh: '郵件' } },
+  { id: 'weather', label: { ko: '날씨', zh: '天氣' } },
 ]
 const DOCK: AppDef[] = [
   { id: 'phone', label: UI.phone },
@@ -344,17 +350,29 @@ export function HomeScreen({ onOpen }: { onOpen: (app: AppId, rect: DOMRect) => 
       {!dock && <span className="app-label">{t(a.label)}</span>}
     </button>
   )
+  const [page, setPage] = useState(0)
+  const { now } = useDevice()
+  const pl = story.extra.music.find((x) => x.id === now?.playlist) ?? story.extra.music[0]
+  const song = now && pl ? pl.songs[now.index] : null
   return (
     <div className="home" style={{ background: wallpaperOf(story, s.wallpaper) }}>
       <StatusBar dark />
+      <div
+        className="home-pages"
+        onScroll={(e) => {
+          const el = e.currentTarget
+          setPage(Math.round(el.scrollLeft / el.clientWidth))
+        }}
+      >
+        <div className="home-page">
       <div className="widgets">
-        <div className="wg wg-weather">
+        <button className="wg wg-weather" onClick={(e) => onOpen('weather', e.currentTarget.getBoundingClientRect())}>
           <small>{t({ ko: '서울', zh: '首爾' })}</small>
           <b>{story.id === 'shinyu' ? '-4°' : '9°'}</b>
           <span>{story.id === 'shinyu' ? '🌙' : '☁️'}</span>
           <small>{story.id === 'shinyu' ? t({ ko: '맑음 · 최고 1° 최저 -7°', zh: '晴 · 高 1° 低 -7°' }) : t({ ko: '흐림 · 최고 14° 최저 6°', zh: '多雲 · 高 14° 低 6°' })}</small>
-        </div>
-        <div className="wg wg-cal">
+        </button>
+        <button className="wg wg-cal" onClick={(e) => onOpen('calendar', e.currentTarget.getBoundingClientRect())}>
           <small className="red">{lang === 'ko' ? `${WD.ko[p.wd]}요일` : `星期${WD.zh[p.wd]}`}</small>
           <b>{p.d}</b>
           {next.slice(0, 2).map((e, i) => (
@@ -362,20 +380,43 @@ export function HomeScreen({ onOpen }: { onOpen: (app: AppId, rect: DOMRect) => 
               {t(e.title)}
             </span>
           ))}
-        </div>
+        </button>
       </div>
       <div className="wg-labels">
         <span>{t({ ko: '날씨', zh: '天氣' })}</span>
         <span>{t(UI.calendar)}</span>
       </div>
       <div className="grid">
-        {GRID.map((a) => (
+        {GRID.slice(0, 8).map((a) => (
           <Icon key={a.id} a={a} />
         ))}
       </div>
-      <div className="home-search">
-        <G n="search" size={13} w={2.6} />
-        {t(UI.search)}
+        </div>
+        <div className="home-page">
+          <button className="wg wg-music" onClick={(e) => onOpen('music', e.currentTarget.getBoundingClientRect())}>
+            <span className="wg-music-art">
+              <span style={{ background: pl?.pic.tint }}>{pl?.pic.emoji}</span>
+            </span>
+            <span>
+              <small>{song ? t({ ko: '지금 재생 중', zh: '正在播放' }) : t({ ko: '최근 재생', zh: '最近播放' })}</small>
+              <b>{song ? song.title : pl ? t(pl.title) : ''}</b>
+              <small>{song ? song.artist : pl ? t(pl.by) : ''}</small>
+            </span>
+          </button>
+          <div className="wg-labels one">
+            <span>{t({ ko: '음악', zh: '音樂' })}</span>
+          </div>
+          <div className="grid">
+            {GRID.slice(8).map((a) => (
+              <Icon key={a.id} a={a} />
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="home-dots">
+        {[0, 1].map((i) => (
+          <i key={i} className={page === i ? 'on' : ''} />
+        ))}
       </div>
       <div className="dock">
         {DOCK.map((a) => (
@@ -488,14 +529,7 @@ export function ControlCenter() {
             <G n="bluetooth" size={22} />
           </button>
         </div>
-        <div className="cc-tile cc-music">
-          <small>{t({ ko: '재생 중 아님', zh: '未在播放' })}</small>
-          <div className="cc-music-btns">
-            <G n="rewind" size={20} />
-            <G n="play" size={24} />
-            <G n="forward" size={20} />
-          </div>
-        </div>
+        <CcMusic />
         <button className={`cc-tile sq ${s.rotationLock ? 'on' : ''}`} onClick={tg('rotationLock')} aria-label="Rotation lock">
           <G n="lockRotate" size={26} />
         </button>
@@ -776,6 +810,44 @@ export function OutgoingCall() {
           <i>
             <G n="phoneFill" size={34} style={{ transform: 'rotate(135deg)' }} />
           </i>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function CcMusic() {
+  const { now, setNow } = useDevice()
+  const { story } = useStory()
+  const { t } = useLang()
+  const pl = now ? story.extra.music.find((p) => p.id === now.playlist) : null
+  const song = pl && now ? pl.songs[now.index] : null
+  const step = (d: number) => pl && now && setNow({ ...now, index: (now.index + d + pl.songs.length) % pl.songs.length, pos: 0 })
+  return (
+    <div className="cc-tile cc-music">
+      {song ? (
+        <span className="cc-song">
+          <b>{song.title}</b>
+          <small>{song.artist}</small>
+        </span>
+      ) : (
+        <small>{t({ ko: '재생 중 아님', zh: '未在播放' })}</small>
+      )}
+      <div className="cc-music-btns">
+        <button onClick={() => step(-1)} aria-label="prev">
+          <G n="rewind" size={20} />
+        </button>
+        <button
+          onClick={() => {
+            if (now) setNow({ ...now, playing: !now.playing })
+            else if (story.extra.music[0]) setNow({ playlist: story.extra.music[0].id, index: 0, playing: true, pos: 0 })
+          }}
+          aria-label="play"
+        >
+          <G n={now?.playing ? 'pause' : 'play'} size={24} />
+        </button>
+        <button onClick={() => step(1)} aria-label="next">
+          <G n="forward" size={20} />
         </button>
       </div>
     </div>
