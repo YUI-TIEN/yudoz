@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { playPing, setMuted } from './sound'
+import { playIm, setMuted, vibrate } from './sound'
 import { PEOPLE, pickReply } from './story/personas'
 import type { L } from './i18n'
 
@@ -16,6 +16,7 @@ export type DeviceSettings = {
   volume: number
   wallpaper: number
   textSize: number
+  vibration: boolean
 }
 
 const DEFAULTS: DeviceSettings = {
@@ -30,6 +31,7 @@ const DEFAULTS: DeviceSettings = {
   volume: 0.6,
   wallpaper: 0,
   textSize: 1,
+  vibration: true,
 }
 
 export type Shot = { id: string; src: string; at: number }
@@ -123,7 +125,7 @@ export function DeviceProvider({ storyId, children }: { storyId: string; childre
           window.setTimeout(() => {
             setTyping((x) => x.filter((y) => y !== contactId))
             setIm((m) => ({ ...m, [contactId]: [...(m[contactId] ?? []), { me: false, text: line, at: Date.now() }] }))
-            playPing()
+            playIm()
           }, 2000 + i * 2200)
         })
       }, 1200)
@@ -162,7 +164,7 @@ export function DeviceProvider({ storyId, children }: { storyId: string; childre
     } catch {
       // 무시
     }
-    setMuted(s.silent || s.volume === 0, s.volume)
+    setMuted(s.silent || s.volume === 0, s.volume, s.focus, s.vibration)
   }, [s, key])
 
   const set = useCallback(<K extends keyof DeviceSettings>(k: K, v: DeviceSettings[K]) => {
@@ -176,13 +178,7 @@ export function DeviceProvider({ storyId, children }: { storyId: string; childre
     })
   }, [])
 
-  const haptic = useCallback((ms = 8) => {
-    try {
-      navigator.vibrate?.(ms)
-    } catch {
-      // 무시
-    }
-  }, [])
+  const haptic = useCallback((ms = 8) => vibrate(ms), [])
 
   const pushBack = useCallback((fn: () => void) => {
     backs.current.push(fn)

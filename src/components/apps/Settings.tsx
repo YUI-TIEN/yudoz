@@ -95,7 +95,14 @@ export function SettingsApp({ onExit }: { onExit: () => void }) {
         <>
           <Group>
             <Cell title={t({ ko: '무음 모드', zh: '靜音模式' })} right={<Toggle on={s.silent} onChange={(v) => set('silent', v)} />} />
+            <Cell title={t({ ko: '진동', zh: '震動' })} right={<Toggle on={s.vibration} onChange={(v) => set('vibration', v)} />} />
           </Group>
+          <p className="group-f set-note">
+            {t({
+              ko: '무음 모드에서는 소리 없이 진동만 울려요. iPhone Safari는 웹 진동을 지원하지 않아 짧은 햅틱으로 대신합니다.',
+              zh: '靜音模式下只會震動不會響。iPhone 的 Safari 不支援網頁震動，會改用短暫的觸覺回饋。',
+            })}
+          </p>
           <Group header={{ ko: '벨소리 및 알림 음량', zh: '鈴聲與提示音量' }}>
             <div className="cell slider-cell">
               <G n="speaker" size={18} />

@@ -5,7 +5,7 @@ import { useStory } from '../../story/engine'
 import type { IgPost, Pic, Tweet } from '../../story/types'
 import { useBackHandler, useDevice } from '../../device'
 import { PEOPLE, pickReply } from '../../story/personas'
-import { playPing } from '../../sound'
+import { playIm } from '../../sound'
 
 /** Instagram 아이디 → 연락처 id */
 const IG_TO_CONTACT: Record<string, string> = {
@@ -467,7 +467,7 @@ function IgDms({ open, onOpen, onClose }: { open: string | null; onOpen: (h: str
     lines.forEach((line, i) => {
       window.setTimeout(() => {
         setSent((s) => ({ ...s, [handle]: [...(s[handle] ?? []), { me: false, text: line }] }))
-        playPing()
+        playIm()
         if (i === lines.length - 1) setTypingFor(null)
       }, 2800 + i * 1800)
     })
