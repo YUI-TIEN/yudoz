@@ -4,6 +4,7 @@ import { moreDohoon, moreCalendar, moreNotes, morePhotos, moreRooms, moreSearche
 import { shinyuExtra } from './shinyuExtra'
 import { shinyuGpt } from './gpt'
 import { secretCalendar, secretContact, secretNotes, secretPhotos, secretPlaylist, secretRoom, secretTriggers } from './shinyuSecret'
+import { moreSecretCal, moreSecretPhotos, moreMoon, novelNotes, secretGpt, secretTweets } from './shinyuSecret2'
 
 /** [시각, 보낸 사람, 한국어, 중국어] */
 type Row = [string, string, string, string]
@@ -593,3 +594,11 @@ shinyu.script.push(...moreTriggers)
   shinyu.extra.music.push(secretPlaylist)
   shinyu.script.push(...secretTriggers)
 }
+
+/* 비밀연애 2부: 숨긴 채팅방 추가분, 연재 소설, 사진, 비밀 계정 글, ChatGPT */
+secretRoom.messages = [...secretRoom.messages, ...moreMoon].sort(byTime)
+shinyu.notes.push(...novelNotes)
+shinyu.extra.hiddenPhotos.push(...moreSecretPhotos)
+shinyu.calendar.push(...moreSecretCal)
+shinyu.extra.x.posts['yu_diary'] = [...(shinyu.extra.x.posts['yu_diary'] ?? []), ...secretTweets].sort((a, b) => ms(b.at) - ms(a.at))
+shinyu.ai.push(...secretGpt)

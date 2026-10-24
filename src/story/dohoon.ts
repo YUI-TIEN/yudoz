@@ -4,6 +4,7 @@ import { moreShinyu, moreCalendar, moreNotes, morePhotos, moreRooms, moreSearche
 import { dohoonExtra } from './dohoonExtra'
 import { dohoonGpt } from './gpt'
 import { secretCalendar, secretContact, secretNotes, secretPhotos, secretPlaylist, secretRoom, secretTriggers } from './dohoonSecret'
+import { moreSecretCal, moreSecretPhotos, moreSky, moreKyungmin, novelNotes, secretGpt, secretTweets } from './dohoonSecret2'
 
 /** [시각, 보낸 사람, 한국어, 중국어] */
 type Row = [string, string, string, string]
@@ -477,4 +478,16 @@ dohoon.script.push(...moreTriggers)
   dohoon.calendar.push(...secretCalendar)
   dohoon.extra.music.push(secretPlaylist)
   dohoon.script.push(...secretTriggers)
+}
+
+/* 비밀연애 2부: 숨긴 채팅방 추가분, 연재 소설, 사진, 비밀 계정 글, ChatGPT */
+secretRoom.messages = [...secretRoom.messages, ...moreSky].sort(byTime)
+dohoon.notes.push(...novelNotes)
+dohoon.extra.hiddenPhotos.push(...moreSecretPhotos)
+dohoon.calendar.push(...moreSecretCal)
+dohoon.extra.x.posts['wolf_note'] = [...(dohoon.extra.x.posts['wolf_note'] ?? []), ...secretTweets].sort((a, b) => ms(b.at) - ms(a.at))
+dohoon.ai.push(...secretGpt)
+{
+  const k = dohoon.rooms.find((r) => r.id === 'kyungmin')
+  if (k) k.messages = [...k.messages, ...moreKyungmin].sort(byTime)
 }
