@@ -211,6 +211,19 @@ export function MapsApp() {
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [drag, setDrag] = useState({ x: 0, y: 0 })
   const [sheetUp, setSheetUp] = useState(false)
+  const [sheetDy, setSheetDy] = useState(0)
+  const sheetDrag = useDrag({
+    onMove: (_x, dy) => setSheetDy(dy),
+    onEnd: (_x, dy, vy) => {
+      setSheetDy(0)
+      if (dy < -30 || vy < -0.4) setSheetUp(true)
+      else if (dy > 30 || vy > 0.4) {
+        setSheetUp(false)
+        setSel(null)
+        setRoute(false)
+      } else if (Math.abs(dy) < 6) setSheetUp((u) => !u)
+    },
+  })
   useBackHandler(!!sel, () => {
     setSel(null)
     setRoute(false)
@@ -275,8 +288,13 @@ export function MapsApp() {
           <G n="location" size={18} />
         </button>
       </div>
-      <div className={`map-sheet ${sheetUp || sel ? 'up' : ''}`}>
-        <button className="sheet-grab" onClick={() => setSheetUp((u) => !u)} aria-label="sheet" />
+      <div
+        className={`map-sheet ${sheetUp || sel ? 'up' : ''}`}
+        style={sheetDy ? { transform: `translateY(calc(${sheetUp || sel ? '0px' : '100% - 168px'} + ${Math.max(sheetUp || sel ? 0 : -9999, sheetDy)}px))`, transition: 'none' } : undefined}
+      >
+        <div className="map-handle" {...sheetDrag}>
+          <span className="sheet-grab" />
+        </div>
         {sel ? (
           <div className="map-card">
             <div className="map-card-head">
@@ -312,7 +330,7 @@ export function MapsApp() {
           </div>
         ) : (
           <>
-            <div className="searchfield">
+            <div className="searchfield map-search" {...sheetDrag}>
               <G n="search" size={16} w={2.4} />
               <span>{t({ ko: '지도 검색', zh: '搜尋地圖' })}</span>
               <G n="mic" size={16} />

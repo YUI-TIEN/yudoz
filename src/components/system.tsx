@@ -42,8 +42,9 @@ export function useDrag(opts: { onMove?: (dx: number, dy: number) => void; onEnd
 /* ---------------- 상태바 ---------------- */
 
 export function StatusBar({ dark = false, lock = false }: { dark?: boolean; lock?: boolean }) {
-  const { clock } = useStory()
-  const { s, setOverlay } = useDevice()
+  const { clock, story, setScreen } = useStory()
+  const { s, setOverlay, now } = useDevice()
+  const pl = now?.playing ? story.extra.music.find((p) => p.id === now.playlist) : null
   const pull = (side: 'left' | 'right') =>
     useDragPull((dy) => {
       if (dy > 30) setOverlay(side === 'right' ? 'control' : 'notifications')
@@ -55,7 +56,21 @@ export function StatusBar({ dark = false, lock = false }: { dark?: boolean; lock
       <span className="sb-left" {...left}>
         {lock ? <span className="sb-carrier">{s.airplane ? '' : 'SKT'}</span> : <span className="sb-time">{fmtClock(clock)}</span>}
       </span>
-      <span className="sb-island" />
+      {pl ? (
+        <button className="sb-island live" onClick={() => setScreen({ kind: 'app', app: 'music' })} aria-label="Now playing">
+          <span className="sb-island-art" style={{ background: pl.pic.tint }}>
+            {pl.pic.emoji}
+          </span>
+          <span className="sb-island-eq">
+            <i />
+            <i />
+            <i />
+            <i />
+          </span>
+        </button>
+      ) : (
+        <span className="sb-island" />
+      )}
       <span className="sb-icons" {...right}>
         {s.airplane ? (
           <G n="plane" size={15} />
@@ -135,6 +150,7 @@ export function LockScreen() {
         <div className="lock-clock">{fmtClock(clock)}</div>
       </div>
       <div className="lock-notices" onPointerDown={(e) => e.stopPropagation()}>
+        <LockPlayer />
         {live.length > 0 && <div className="lock-section">{t({ ko: '알림 센터', zh: '通知中心' })}</div>}
         {live.slice(0, 4).map((n) => (
           <button
@@ -932,6 +948,43 @@ function CcMusic() {
         </button>
         <button onClick={() => step(1)} aria-label="next">
           <G n="forward" size={20} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function LockPlayer() {
+  const { now, setNow } = useDevice()
+  const { story } = useStory()
+  if (!now) return null
+  const pl = story.extra.music.find((p) => p.id === now.playlist)
+  const song = pl?.songs[now.index]
+  if (!pl || !song) return null
+  const step = (d: number) => setNow({ ...now, index: (now.index + d + pl.songs.length) % pl.songs.length, pos: 0 })
+  return (
+    <div className="lock-player">
+      <div className="lock-player-top">
+        <span className="lock-player-art" style={{ background: pl.pic.tint }}>
+          {pl.pic.emoji}
+        </span>
+        <span>
+          <b>{song.title}</b>
+          <small>{song.artist}</small>
+        </span>
+      </div>
+      <div className="lock-player-bar">
+        <i style={{ width: `${Math.min(100, (now.pos / song.dur) * 100)}%` }} />
+      </div>
+      <div className="lock-player-btns">
+        <button onClick={() => step(-1)} aria-label="prev">
+          <G n="rewind" size={26} />
+        </button>
+        <button onClick={() => setNow({ ...now, playing: !now.playing })} aria-label="play">
+          <G n={now.playing ? 'pause' : 'play'} size={32} />
+        </button>
+        <button onClick={() => step(1)} aria-label="next">
+          <G n="forward" size={26} />
         </button>
       </div>
     </div>

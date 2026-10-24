@@ -318,6 +318,13 @@ const PATHS: Record<string, React.ReactNode> = {
     </>
   ),
   expand: <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />,
+  copy: (
+    <>
+      <rect x="8" y="8" width="12" height="12" rx="2.5" />
+      <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+    </>
+  ),
+  thumb: <path d="M7 10v10H4V10zM7 10l4-7c1.5 0 2.5 1 2.2 2.6L12.6 9H19a2 2 0 0 1 2 2.3l-1.2 6.8A2 2 0 0 1 17.8 20H7" />,
   apps: <path d="M4.5 4.5h6v6h-6zM13.5 4.5h6v6h-6zM4.5 13.5h6v6h-6zM13.5 13.5h6v6h-6z" />,
 }
 
@@ -457,10 +464,10 @@ export function AppIcon({ id, day, weekday }: { id: AppId | 'camera' | 'clock'; 
       )
     case 'ai':
       return (
-        <Squircle id="ig-ai" bg={lin('ig-ai', '#e08b6d', '#c26b4f')}>
-          <g transform="translate(30 30)" fill="#fff8f0">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <rect key={i} x="-1.6" y="-17" width="3.2" height="13" rx="1.6" transform={`rotate(${i * 30})`} />
+        <Squircle id="ig-gpt" bg={lin('ig-gpt', '#111', '#000')}>
+          <g transform="translate(30 30)" fill="none" stroke="#fff" strokeWidth="2.6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <rect key={i} x="-5.2" y="-15.5" width="10.4" height="19" rx="5.2" transform={`rotate(${i * 60}) translate(0 -1.5)`} />
             ))}
           </g>
         </Squircle>

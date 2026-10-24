@@ -28,6 +28,9 @@ type Progress = {
   notices: (Banner & { at: string })[]
   /** 자유 대화에서 사람마다 몇 번 답했는지 */
   freeCount: Record<string, number>
+  /** 스크립트가 시각을 바꾼 뒤부터는 실제 시간만큼 흐른다 (그때의 실제 ms) */
+  liveFrom?: number
+  ended?: boolean
 }
 
 const GAP = 1400
@@ -57,6 +60,7 @@ export function matchBranch(branches: ReplyBranch[], text: string): ReplyBranch 
 
 type Ctx = {
   story: PhoneStory
+  ended: boolean
   screen: Screen
   setScreen: (s: Screen) => void
   unlock: () => void
@@ -108,6 +112,18 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
     setProgress(next)
   }, [])
 
+  /** 지금 폰에 표시되는 시각 */
+  const nowIso = useCallback(() => {
+    const p = ref.current
+    return p.liveFrom ? new Date(ms(p.clock) + Date.now() - p.liveFrom).toISOString() : p.clock
+  }, [])
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    if (!progress.liveFrom) return
+    const id = window.setInterval(() => setTick((x) => x + 1), 5000)
+    return () => window.clearInterval(id)
+  }, [progress.liveFrom])
+
   useEffect(() => {
     try {
       window.sessionStorage.setItem(`yudoz-${story.id}-v1`, JSON.stringify(progress))
@@ -145,10 +161,10 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
   )
 
   const deliver = useCallback(
-    (id: string, room: string, from: string, content: { text: L } | { sticker: string }) => {
+    (id: string, room: string, from: string, content: { text: L } | { sticker: string } | { photo: L }) => {
       const p = ref.current
       if (p.added.some((m) => m.id === id)) return
-      const msg = { id, room, from, at: p.clock, seq: p.seq, ...content } as LiveMsg
+      const msg = { id, room, from, at: nowIso(), seq: p.seq, ...content } as LiveMsg
       const viewing = view.current.screen.kind === 'app' && view.current.screen.app === 'kakao' && view.current.openRoom === room
       commit({ ...p, seq: p.seq + 1, added: [...p.added, msg], readIds: viewing ? [...p.readIds, id] : p.readIds })
       playPing()
@@ -157,14 +173,14 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
           key: id,
           room,
           sender: roomSender(room, from),
-          text: 'text' in content ? content.text : { ko: '이모티콘을 보냈습니다.', zh: '傳送了貼圖。' },
+          text: 'text' in content ? content.text : 'photo' in content ? { ko: '사진을 보냈습니다.', zh: '傳送了照片。' } : { ko: '이모티콘을 보냈습니다.', zh: '傳送了貼圖。' },
         }
         setBanner(b)
-        ref.current = { ...ref.current, notices: [...ref.current.notices, { ...b, at: ref.current.clock }] }
+        ref.current = { ...ref.current, notices: [...ref.current.notices, { ...b, at: nowIso() }] }
         setProgress(ref.current)
       }
     },
-    [commit, roomSender],
+    [commit, roomSender, nowIso],
   )
 
   const emitRef = useRef<(ev: string) => void>(() => {})
@@ -198,8 +214,20 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
             later(step, a.gap ?? GAP)
             return
           }
+          case 'photo': {
+            const room = story.rooms.find((r) => r.id === a.room)
+            deliver(aid, a.room, a.from ?? room?.contactId ?? '', { photo: a.caption })
+            markDone()
+            later(step, a.gap ?? GAP)
+            return
+          }
+          case 'end':
+            commit({ ...ref.current, ended: true })
+            markDone()
+            later(step, 100)
+            return
           case 'clock':
-            commit({ ...ref.current, clock: a.at })
+            commit({ ...ref.current, clock: a.at, liveFrom: Date.now() })
             markDone()
             later(step, 300)
             return
@@ -317,7 +345,7 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
     if (typeof payload === 'string' && !text) return
     const id = `me-${p.seq}`
     const content = typeof payload === 'string' ? { text } : payload
-    const msg = { id, room, from: 'me', at: p.clock, seq: p.seq, unreadByThem: true, ...content } as LiveMsg
+    const msg = { id, room, from: 'me', at: nowIso(), seq: p.seq, unreadByThem: true, ...content } as LiveMsg
 
     // 스토리가 답을 기다리는 방
     if (p.pendingReply?.room === room) {
@@ -377,7 +405,7 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
   const finishCallAction = (type: 'incoming' | 'missed', seconds: number) => {
     if (!call) return
     const p = ref.current
-    commit({ ...p, done: [...p.done, call.key], calls: [...p.calls, { at: p.clock, contactId: call.from, type, seconds }] })
+    commit({ ...p, done: [...p.done, call.key], calls: [...p.calls, { at: nowIso(), contactId: call.from, type, seconds }] })
     const key = call.key
     setCall(null)
     if (type === 'missed' && call.declinedMsg) {
@@ -429,7 +457,8 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
     queueRoom: (id) => {
       pendingRoom.current = id
     },
-    clock: progress.clock,
+    clock: nowIso(),
+    ended: !!progress.ended,
     rooms,
     unreadByRoom,
     totalUnread: Object.values(unreadByRoom).reduce((a, b) => a + b, 0),
@@ -448,7 +477,7 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
     extraCalls: progress.calls,
     addCall: (contactId, type, seconds) => {
       const p = ref.current
-      commit({ ...p, calls: [...p.calls, { at: p.clock, contactId, type, seconds }] })
+      commit({ ...p, calls: [...p.calls, { at: nowIso(), contactId, type, seconds }] })
     },
     notices: progress.notices,
     clearNotices: () => commit({ ...ref.current, notices: [] }),

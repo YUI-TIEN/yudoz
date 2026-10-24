@@ -76,7 +76,7 @@ export const UI = {
   search: { ko: '검색', zh: '搜尋' },
   recentSearches: { ko: '최근 검색어', zh: '最近搜尋' },
   kakao: { ko: '카카오톡', zh: 'KakaoTalk' },
-  ai: { ko: '애스크', zh: 'Ask AI' },
+  ai: { ko: 'ChatGPT', zh: 'ChatGPT' },
   aiDisclaimer: {
     ko: '애스크는 실수를 할 수 있습니다. 중요한 정보는 확인하세요.',
     zh: 'Ask AI 可能會出錯，重要資訊請再次確認。',

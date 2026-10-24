@@ -52,7 +52,7 @@ export type CallLog = { at: string; contactId: string; type: 'incoming' | 'outgo
 export type Note = { id: string; title: L; at: string; body: L; pinned?: boolean; locked?: boolean }
 export type Photo = { id: string; at: string; caption: L; emoji: string; tint: string; src?: string }
 export type SearchItem = { q: L; result: { title: L; body: L }[] }
-export type AiChat = { id: string; title: L; turns: { q: L; a: L }[] }
+export type AiChat = { id: string; title: L; turns: { q: L; a: L }[]; when?: 'today' | 'yesterday' | 'week' | 'month' }
 export type CalEvent = { date: string; title: L; time?: string; color: string }
 export type VoiceMemo = { id: string; title: L; at: string; seconds: number; transcript: L }
 
@@ -76,6 +76,9 @@ export type Action =
   | { t: 'reply'; room: string; branches: ReplyBranch[] }
   | { t: 'call'; from: string; lines: L[]; declinedMsg?: L }
   | { t: 'wait'; ms: number }
+  | { t: 'photo'; room: string; from?: string; caption: L; gap?: number }
+  /** 이야기 끝 (엔딩 비밀 해금) */
+  | { t: 'end' }
 
 export type Trigger = {
   id: string

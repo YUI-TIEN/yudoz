@@ -37,7 +37,7 @@ export type IMsg = { me: boolean; text: L; at: number }
 export type NowPlaying = { playlist: string; index: number; playing: boolean; pos: number }
 
 /** 찾을 수 있는 비밀들 */
-export const SECRETS = ['x-diary', 'locked-note', 'hidden', 'deleted', 'draft'] as const
+export const SECRETS = ['x-diary', 'locked-note', 'hidden', 'deleted', 'draft', 'ending'] as const
 export type SecretId = (typeof SECRETS)[number]
 export const SECRET_LABEL: Record<SecretId, { ko: string; zh: string }> = {
   'x-diary': { ko: 'X 비밀 계정', zh: 'X 祕密帳號' },
@@ -45,6 +45,7 @@ export const SECRET_LABEL: Record<SecretId, { ko: string; zh: string }> = {
   hidden: { ko: '가려진 앨범', zh: '隱藏的相簿' },
   deleted: { ko: '최근 삭제된 사진', zh: '最近刪除的照片' },
   draft: { ko: '보내지 않은 메일', zh: '沒寄出的郵件' },
+  ending: { ko: '이야기의 끝', zh: '故事的結局' },
 }
 export type Overlay = 'none' | 'control' | 'notifications'
 

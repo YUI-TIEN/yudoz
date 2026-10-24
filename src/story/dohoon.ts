@@ -1,6 +1,7 @@
 import { kst } from '../time'
 import type { ChatMsg, PhoneStory } from './types'
 import { dohoonExtra } from './dohoonExtra'
+import { dohoonGpt } from './gpt'
 
 /** [시각, 보낸 사람, 한국어, 중국어] */
 type Row = [string, string, string, string]
@@ -292,34 +293,7 @@ export const dohoon: PhoneStory = {
     { q: { ko: '생크림 케이크 초 몇 개', zh: '鮮奶油蛋糕 蠟燭 幾根' }, result: [{ title: { ko: '나이만큼 꽂는 게 정석', zh: '插跟年齡一樣的數量是基本' }, body: { ko: '한국 나이로 할지 만 나이로 할지는 생일자 기분에 따라.', zh: '要用韓國歲還是實歲，看壽星心情。' } }] },
   ],
 
-  ai: [
-    {
-      id: 'a1',
-      title: { ko: '리더 형에게 고마움 전하기', zh: '向隊長哥表達感謝' },
-      turns: [
-        {
-          q: { ko: '맨날 챙겨주는 형한테 고맙다고 말하고 싶은데 말로 하면 어색해. 어떻게 해?', zh: '想跟總是照顧我的哥說謝謝，可是用說的很尷尬。怎麼辦？' },
-          a: {
-            ko: '말로 하기 어렵다면 그 사람이 해왔던 방식을 그대로 돌려주는 것도 좋아요. 예를 들어 상대가 늘 먼저 연락해 줬다면, 이번엔 당신이 먼저 연락해 보세요. 행동이 말보다 먼저 전해질 때가 많아요.',
-            zh: '如果用說的很難，可以用對方一直以來的方式回報他。例如對方總是先聯絡你，這次就換你先聯絡。很多時候行動比話語更早傳達心意。',
-          },
-        },
-      ],
-    },
-    {
-      id: 'a2',
-      title: { ko: '소파에서 자는 습관', zh: '睡沙發的習慣' },
-      turns: [
-        {
-          q: { ko: '자꾸 소파에서 잠드는데 누가 담요 덮어주는 게 좋아서 그런 것 같아. 이거 고쳐야 돼?', zh: '我一直在沙發上睡著，好像是因為喜歡有人幫我蓋毯子。這要改嗎？' },
-          a: {
-            ko: '허리 건강을 생각하면 침대가 좋아요. 다만 담요를 덮어주는 사람에게 고맙다는 말은 꼭 해 주세요. 그 사람도 아마 알고 있을 거예요.',
-            zh: '為了腰部健康，還是睡床比較好。不過一定要跟幫你蓋毯子的人說聲謝謝。那個人大概也知道吧。',
-          },
-        },
-      ],
-    },
-  ],
+  ai: dohoonGpt,
 
   calendar: [
     { date: '2026-11-01', title: { ko: '작전방 개설', zh: '建立作戰群' }, color: '#ff9f0a' },
@@ -451,6 +425,30 @@ export const dohoon: PhoneStory = {
             },
           ],
         },
+      ],
+    },
+    {
+      id: 'epilogue',
+      when: 'branch:shinyu:letter',
+      delay: 6000,
+      actions: [
+        { t: 'msg', room: 'plan', from: 'hanjin', text: { ko: '형 문 열렸어요!!!', zh: '哥門開了!!!' } },
+        { t: 'photo', room: 'plan', from: 'kyungmin', caption: { ko: '케이크 앞 신유형 (눈물 참는 중)', zh: '蛋糕前的申惟哥（忍著不哭）' } },
+        { t: 'msg', room: 'plan', from: 'jihoon', text: { ko: '도훈이형이 더 울었어요 ㅋㅋㅋ', zh: '道勳哥哭得更兇ㅋㅋㅋ' }, gap: 4000 },
+        { t: 'msg', room: 'shinyu', text: { ko: '도훈아', zh: '道勳啊' } },
+        { t: 'msg', room: 'shinyu', text: { ko: '볼링공 봤어', zh: '我看到保齡球了' } },
+        { t: 'msg', room: 'shinyu', text: { ko: 'S.Y. 이거 뭐야 ㅋㅋ', zh: 'S.Y. 這是什麼啦ㅋㅋ' } },
+        { t: 'msg', room: 'shinyu', text: { ko: '...고마워. 진짜로', zh: '……謝謝。真的' }, gap: 14000 },
+        { t: 'msg', room: 'shinyu', text: { ko: '근데 이걸로 나 이기라고 준 거면', zh: '不過如果這是要讓我贏才送的' } },
+        { t: 'msg', room: 'shinyu', text: { ko: '봐주지 마. 진짜로 이길 거니까', zh: '不准放水。我會真的贏你' }, gap: 20000 },
+        { t: 'msg', room: 'tws', from: 'youngjae', text: { ko: '신유 생일 축하해', zh: '申惟生日快樂' } },
+        { t: 'msg', room: 'tws', from: 'kyungmin', text: { ko: '형 생축!!! 🩵', zh: '哥生快!!! 🩵' } },
+        { t: 'msg', room: 'tws', from: 'shinyu', text: { ko: '다들 고마워 🩵 내일 11시 늦지 마', zh: '謝謝大家 🩵 明天十一點不要遲到' }, gap: 30000 },
+        { t: 'msg', room: 'shinyu', text: { ko: '자냐', zh: '睡了嗎' } },
+        { t: 'msg', room: 'shinyu', text: { ko: '올해는 네가 먼저였네', zh: '今年是你先說的呢' } },
+        { t: 'msg', room: 'shinyu', text: { ko: '소파 말고 방에서 자 🩵', zh: '不要睡沙發，回房間睡 🩵' } },
+        { t: 'msg', room: 'shinyu', text: { ko: '잘 자 도훈아', zh: '晚安 道勳' } },
+        { t: 'end' },
       ],
     },
   ],

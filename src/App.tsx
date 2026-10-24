@@ -24,7 +24,8 @@ import { PhotosApp } from './components/apps/Photos'
 import { CameraApp } from './components/apps/Camera'
 import { ClockApp } from './components/apps/Clock'
 import { SettingsApp } from './components/apps/Settings'
-import { AiApp, CalendarApp, NotesApp, SearchApp, VoiceApp } from './components/apps/Others'
+import { CalendarApp, NotesApp, SearchApp, VoiceApp } from './components/apps/Others'
+import { GptApp } from './components/apps/Gpt'
 import { InstagramApp, XApp } from './components/apps/Social'
 import { MailApp, MapsApp, MusicApp, WeatherApp } from './components/apps/Media'
 import { SECRETS, SECRET_LABEL, type SecretId } from './device'
@@ -39,8 +40,11 @@ const DARK_APPS: AppId[] = ['camera', 'voice', 'clock', 'weather', 'x']
 type Origin = { x: number; y: number; w: number; h: number }
 
 function Screens({ onExit, frame }: { onExit: () => void; frame: React.RefObject<HTMLDivElement> }) {
-  const { screen, setScreen } = useStory()
-  const { s, flashlight, goBack, setOverlay } = useDevice()
+  const { screen, setScreen, ended } = useStory()
+  const { s, flashlight, goBack, setOverlay, discover } = useDevice()
+  useEffect(() => {
+    if (ended) discover('ending')
+  }, [ended, discover])
   const [origin, setOrigin] = useState<Origin | null>(null)
   const [closing, setClosing] = useState<AppId | null>(null)
   const [dragY, setDragY] = useState(0)
@@ -53,7 +57,7 @@ function Screens({ onExit, frame }: { onExit: () => void; frame: React.RefObject
     photos: () => <PhotosApp />,
     notes: () => <NotesApp />,
     search: () => <SearchApp />,
-    ai: () => <AiApp />,
+    ai: () => <GptApp />,
     calendar: () => <CalendarApp />,
     voice: () => <VoiceApp />,
     settings: () => <SettingsApp onExit={onExit} />,

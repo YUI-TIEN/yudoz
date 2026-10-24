@@ -1,6 +1,7 @@
 import { kst } from '../time'
 import type { ChatMsg, PhoneStory } from './types'
 import { shinyuExtra } from './shinyuExtra'
+import { shinyuGpt } from './gpt'
 
 /** [시각, 보낸 사람, 한국어, 중국어] */
 type Row = [string, string, string, string]
@@ -370,6 +371,7 @@ export const shinyu: PhoneStory = {
   ],
 
   ai: [
+    ...shinyuGpt,
     {
       id: 'a1',
       title: { ko: '무뚝뚝한 척하는 동생에게 편지', zh: '寫信給裝酷的弟弟' },
@@ -535,6 +537,33 @@ export const shinyu: PhoneStory = {
             },
           ],
         },
+      ],
+    },
+    {
+      id: 'epilogue',
+      when: 'branch:dohoon:letter',
+      delay: 6000,
+      actions: [
+        { t: 'msg', room: 'secret', from: 'youngjae', text: { ko: '케이크 들고 간다 불 꺼', zh: '拿蛋糕過去了 關燈' } },
+        { t: 'msg', room: 'secret', from: 'hanjin', text: { ko: '도훈이형 표정 ㅋㅋㅋㅋㅋ', zh: '道勳哥的表情ㅋㅋㅋㅋㅋ' }, gap: 2600 },
+        { t: 'photo', room: 'secret', from: 'kyungmin', caption: { ko: '케이크 앞 도훈이형 (울기 직전)', zh: '蛋糕前的道勳哥（快哭了）' } },
+        { t: 'msg', room: 'secret', from: 'kyungmin', text: { ko: '신유형도 울 뻔한 거 다 찍혔어요', zh: '申惟哥差點哭出來也全拍到了' }, gap: 4000 },
+        { t: 'msg', room: 'dohoon', text: { ko: '형', zh: '哥' } },
+        { t: 'msg', room: 'dohoon', text: { ko: '아까 케이크 앞에서 형이 더 울 뻔한 거 봤어요', zh: '剛剛在蛋糕前，我看到哥比我還要快哭了' } },
+        { t: 'msg', room: 'dohoon', text: { ko: '모른 척해줄게요 🐺', zh: '我會裝作不知道的 🐺' }, gap: 14000 },
+        { t: 'msg', room: 'dohoon', text: { ko: '아 그리고 냉장고에 두쫀쿠 두 개 있던데', zh: '啊還有，冰箱裡有兩個杜拜Q餅' } },
+        { t: 'msg', room: 'dohoon', text: { ko: '이거 형이 산 거예요??', zh: '這是哥買的嗎??' } },
+        { t: 'sticker', room: 'dohoon', sticker: '🥹', gap: 2400 },
+        { t: 'msg', room: 'dohoon', text: { ko: '먹고 싶다고 한 거 기억했네', zh: '你記得我說想吃' }, gap: 20000 },
+        { t: 'msg', room: 'tws', from: 'jihoon', text: { ko: '도훈이형 생일 축하해요!!! 🎂', zh: '道勳哥生日快樂!!! 🎂' } },
+        { t: 'msg', room: 'tws', from: 'youngjae', text: { ko: '도훈아 생축', zh: '道勳 生快' } },
+        { t: 'msg', room: 'tws', from: 'dohoon', text: { ko: '다들 고마워요 🐺🩵 진짜로', zh: '謝謝大家 🐺🩵 真的' } },
+        { t: 'msg', room: 'tws', from: 'kyungmin', text: { ko: '이제 다들 자요 내일 10시 출발', zh: '大家快睡 明天十點出發' }, gap: 30000 },
+        { t: 'msg', room: 'dohoon', text: { ko: '형 자요?', zh: '哥睡了嗎？' } },
+        { t: 'msg', room: 'dohoon', text: { ko: '오늘 진짜 좋았어요', zh: '今天真的很開心' } },
+        { t: 'msg', room: 'dohoon', text: { ko: '내일 볼링 리매치 잊지 마요 🎳', zh: '別忘了明天的保齡球復仇戰 🎳' } },
+        { t: 'msg', room: 'dohoon', text: { ko: '잘 자요 형', zh: '晚安 哥' } },
+        { t: 'end' },
       ],
     },
   ],
