@@ -105,6 +105,7 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
   const running = useRef(new Set<string>())
   const pendingRoom = useRef<string | null>(null)
   const early = useRef<Record<string, string>>({})
+  const flushRef = useRef<() => void>(() => {})
   const resolveRef = useRef<(room: string, text: string) => void>(() => {})
 
   const commit = useCallback((next: Progress) => {
@@ -195,6 +196,7 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
         while (i < actions.length && ref.current.done.includes(`${triggerId}#${i}`)) i++
         if (i >= actions.length) {
           running.current.delete(triggerId)
+          window.setTimeout(() => flushRef.current(), 1200)
           return
         }
         const a = actions[i]
@@ -309,6 +311,15 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
     )
 
   const freeTimers = useRef<Record<string, number>>({})
+
+  /** 스크립트가 끝났는데 답을 못 받은 메시지가 있으면 자유 대화로 답한다 */
+  flushRef.current = () => {
+    for (const [room, tx] of Object.entries(early.current)) {
+      if (scriptBusy(room) || ref.current.pendingReply?.room === room) continue
+      delete early.current[room]
+      freeReply(room, 'text', tx)
+    }
+  }
 
   const freeReply = (room: string, lastKind: 'text' | 'sticker' | 'photo', lastText: string) => {
     const roomDef = story.rooms.find((x) => x.id === room)
@@ -461,7 +472,7 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
     ended: !!progress.ended,
     rooms,
     unreadByRoom,
-    totalUnread: Object.values(unreadByRoom).reduce((a, b) => a + b, 0),
+    totalUnread: Object.entries(unreadByRoom).reduce((a, [id, n]) => a + (story.rooms.find((r) => r.id === id)?.hidden ? 0 : n), 0),
     openRoom,
     setOpenRoom,
     canReply: () => true,

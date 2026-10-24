@@ -239,9 +239,24 @@ function Viewer({ list, start, favs, setFavs, onClose }: { list: Item[]; start: 
 }
 
 /** 가려진 항목: Face ID 실패 → 암호 입력 */
-function PhotoLock({ passcode, onOk, onCancel }: { passcode: string; onOk: () => void; onCancel: () => void }) {
+export function PhotoLock({
+  passcode,
+  onOk,
+  onCancel,
+  title,
+  hint,
+  face = true,
+}: {
+  passcode: string
+  onOk: () => void
+  onCancel: () => void
+  title?: L
+  hint?: L
+  face?: boolean
+}) {
   const { t } = useLang()
-  const [stage, setStage] = useState<'face' | 'code'>('face')
+  const [stage, setStage] = useState<'face' | 'code'>(face ? 'face' : 'code')
+  const [fails, setFails] = useState(0)
   const [code, setCode] = useState('')
   const [shake, setShake] = useState(false)
   useBackHandler(true, onCancel)
@@ -255,6 +270,7 @@ function PhotoLock({ passcode, onOk, onCancel }: { passcode: string; onOk: () =>
     if (next.length < 4) return
     if (next === passcode) window.setTimeout(onOk, 150)
     else {
+      setFails((n) => n + 1)
       setShake(true)
       window.setTimeout(() => {
         setShake(false)
@@ -272,7 +288,7 @@ function PhotoLock({ passcode, onOk, onCancel }: { passcode: string; onOk: () =>
         </div>
       ) : (
         <>
-          <p className="ph-lock-title">{t({ ko: '가려진 앨범을 보려면 iPhone 암호를 입력하십시오', zh: '輸入 iPhone 密碼以檢視隱藏的相簿' })}</p>
+          <p className="ph-lock-title">{t(title ?? { ko: '가려진 앨범을 보려면 iPhone 암호를 입력하십시오', zh: '輸入 iPhone 密碼以檢視隱藏的相簿' })}</p>
           <div className={`pc-dots dark ${shake ? 'shake' : ''}`}>
             {[0, 1, 2, 3].map((i) => (
               <span key={i} className={i < code.length ? 'on' : ''} />
@@ -289,6 +305,7 @@ function PhotoLock({ passcode, onOk, onCancel }: { passcode: string; onOk: () =>
               ),
             )}
           </div>
+          {hint && fails > 0 && <p className="ph-lock-hint">{t(hint)}</p>}
           <button className="ph-lock-cancel" onClick={onCancel}>
             {t({ ko: '취소', zh: '取消' })}
           </button>

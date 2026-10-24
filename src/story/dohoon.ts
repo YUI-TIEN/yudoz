@@ -3,6 +3,7 @@ import type { ChatMsg, PhoneStory } from './types'
 import { moreShinyu, moreCalendar, moreNotes, morePhotos, moreRooms, moreSearches, moreTriggers } from './dohoonMore'
 import { dohoonExtra } from './dohoonExtra'
 import { dohoonGpt } from './gpt'
+import { secretCalendar, secretContact, secretNotes, secretPhotos, secretPlaylist, secretRoom, secretTriggers } from './dohoonSecret'
 
 /** [시각, 보낸 사람, 한국어, 중국어] */
 type Row = [string, string, string, string]
@@ -465,3 +466,15 @@ dohoon.photos.push(...morePhotos)
 dohoon.searches.push(...moreSearches)
 dohoon.calendar.push(...moreCalendar)
 dohoon.script.push(...moreTriggers)
+
+/* 숨긴 채팅방 (팬메이드 비밀연애 에피소드) */
+{
+  const [cid, c] = secretContact
+  dohoon.contacts[cid] = c
+  dohoon.rooms.push(secretRoom)
+  dohoon.notes.push(...secretNotes)
+  dohoon.extra.hiddenPhotos.push(...secretPhotos)
+  dohoon.calendar.push(...secretCalendar)
+  dohoon.extra.music.push(secretPlaylist)
+  dohoon.script.push(...secretTriggers)
+}

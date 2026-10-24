@@ -6451,3 +6451,83 @@ button.cell:active {
   justify-content: center;
   gap: 46px;
 }
+
+/* 카카오톡 숨긴 채팅방 */
+.k-head-btn {
+  display: grid;
+  place-items: center;
+  color: inherit;
+}
+.k-head-sub {
+  gap: 6px;
+  padding-left: 8px;
+}
+.k-head-sub h1 {
+  font-size: 18px;
+}
+.k-back {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: inherit;
+}
+.k-hidden-note {
+  margin: 0 20px 10px;
+  color: #8e8e93;
+  font-size: 12.5px;
+}
+.k-room-mid b svg {
+  flex: none;
+  align-self: center;
+  color: #8e8e93;
+}
+.k-menu-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+}
+.k-menu {
+  position: absolute;
+  top: 96px;
+  right: 14px;
+  min-width: 200px;
+  background: rgba(250, 250, 250, 0.96);
+  backdrop-filter: blur(20px);
+  border-radius: 14px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+  animation: k-menu-in 0.18s ease-out;
+  transform-origin: top right;
+}
+.k-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 13px 16px;
+  font-size: 16px;
+  text-align: left;
+  color: #000;
+  border-bottom: 0.5px solid rgba(60, 60, 67, 0.2);
+}
+.k-menu button:last-child {
+  border-bottom: 0;
+}
+@keyframes k-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+.ph-lock-hint {
+  margin: 14px 0 0;
+  color: #8e8e93;
+  font-size: 14px;
+}
+.kakao .ph-lock {
+  z-index: 50;
+}
+.ph-lock > .statusbar {
+  align-self: stretch;
+}

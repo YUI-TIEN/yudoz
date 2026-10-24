@@ -3,6 +3,7 @@ import type { ChatMsg, PhoneStory } from './types'
 import { moreDohoon, moreCalendar, moreNotes, morePhotos, moreRooms, moreSearches, moreTriggers } from './shinyuMore'
 import { shinyuExtra } from './shinyuExtra'
 import { shinyuGpt } from './gpt'
+import { secretCalendar, secretContact, secretNotes, secretPhotos, secretPlaylist, secretRoom, secretTriggers } from './shinyuSecret'
 
 /** [시각, 보낸 사람, 한국어, 중국어] */
 type Row = [string, string, string, string]
@@ -580,3 +581,15 @@ shinyu.photos.push(...morePhotos)
 shinyu.searches.push(...moreSearches)
 shinyu.calendar.push(...moreCalendar)
 shinyu.script.push(...moreTriggers)
+
+/* 숨긴 채팅방 (팬메이드 비밀연애 에피소드) */
+{
+  const [cid, c] = secretContact
+  shinyu.contacts[cid] = c
+  shinyu.rooms.push(secretRoom)
+  shinyu.notes.push(...secretNotes)
+  shinyu.extra.hiddenPhotos.push(...secretPhotos)
+  shinyu.calendar.push(...secretCalendar)
+  shinyu.extra.music.push(secretPlaylist)
+  shinyu.script.push(...secretTriggers)
+}

@@ -45,6 +45,8 @@ export type Room = {
   /** 처음부터 안 읽은 메시지 수 */
   unread?: number
   muted?: boolean
+  /** 카카오톡 숨긴 채팅방 (암호로 열기 전엔 목록에 안 보임) */
+  hidden?: boolean
 }
 
 export type SmsThread = { id: string; from: L; contactId?: string; messages: { at: string; text: L; me?: boolean }[]; unread?: boolean }

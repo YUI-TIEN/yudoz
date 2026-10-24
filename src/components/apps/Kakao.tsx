@@ -7,6 +7,7 @@ import { useBackHandler, useDevice } from '../../device'
 import { Avatar, PhotoTile } from '../common'
 import { StatusBar } from '../system'
 import { G } from '../icons'
+import { PhotoLock } from './Photos'
 
 type AnyMsg = (ChatMsg & { id?: string; unreadByThem?: boolean; seq?: number }) | LiveMsg
 type Tab = 'friends' | 'chats' | 'open' | 'shop' | 'more'
@@ -27,12 +28,13 @@ export function KakaoApp() {
   const { openRoom } = useStory()
   const [tab, setTab] = useState<Tab>('chats')
   const [profile, setProfile] = useState<string | null>(null)
+  const [hiddenView, setHiddenView] = useState(false)
   if (openRoom) return <ChatRoom id={openRoom} />
   return (
     <div className="kakao">
       <StatusBar />
       {tab === 'friends' && <Friends onProfile={setProfile} />}
-      {tab === 'chats' && <ChatList />}
+      {tab === 'chats' && <ChatList hiddenView={hiddenView} setHiddenView={setHiddenView} />}
       {(tab === 'open' || tab === 'shop' || tab === 'more') && <Empty tab={tab} />}
       <KakaoTabs tab={tab} setTab={setTab} />
       {profile && <Profile id={profile} onClose={() => setProfile(null)} />}
@@ -61,14 +63,16 @@ function KakaoTabs({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
   )
 }
 
-function KHead({ title, icons }: { title: L; icons: string[] }) {
+function KHead({ title, icons, onIcon }: { title: L; icons: string[]; onIcon?: (n: string) => void }) {
   const { t } = useLang()
   return (
     <div className="k-head">
       <h1>{t(title)}</h1>
       <span>
         {icons.map((n) => (
-          <G key={n} n={n} size={23} w={1.9} />
+          <button key={n} className="k-head-btn" onClick={() => onIcon?.(n)} aria-label={n}>
+            <G n={n} size={23} w={1.9} />
+          </button>
         ))}
       </span>
     </div>
@@ -96,7 +100,7 @@ function Empty({ tab }: { tab: Tab }) {
 function Friends({ onProfile }: { onProfile: (id: string) => void }) {
   const { story } = useStory()
   const { t } = useLang()
-  const friends = Object.entries(story.contacts).filter(([id]) => story.rooms.some((r) => r.contactId === id || r.group?.members.includes(id)))
+  const friends = Object.entries(story.contacts).filter(([id]) => story.rooms.some((r) => !r.hidden && (r.contactId === id || r.group?.members.includes(id))))
   return (
     <>
       <KHead title={UI.friends} icons={['search', 'plus', 'gear']} />
@@ -192,18 +196,57 @@ function Profile({ id, onClose }: { id: string; onClose: () => void }) {
   )
 }
 
-function ChatList() {
+/** 숨긴 채팅방 암호: 둘이 사귀기 시작한 날 (12/24) */
+const HIDDEN_CODE = '1224'
+
+function ChatList({ hiddenView, setHiddenView }: { hiddenView: boolean; setHiddenView: (v: boolean) => void }) {
   const { rooms, unreadByRoom, story, setOpenRoom, clock } = useStory()
+  const { found, discover } = useDevice()
   const { t, lang } = useLang()
+  const [menu, setMenu] = useState(false)
+  const [lock, setLock] = useState(false)
+  useBackHandler(hiddenView, () => setHiddenView(false))
+  const hasHidden = rooms.some((r) => r.hidden)
+  const list = rooms.filter((r) => !!r.hidden === hiddenView)
+
+  if (lock)
+    return (
+      <PhotoLock
+        passcode={HIDDEN_CODE}
+        face={false}
+        title={{ ko: '숨긴 채팅방 비밀번호를 입력해 주세요', zh: '請輸入隱藏聊天室的密碼' }}
+        hint={{ ko: '힌트: 그날 🎄', zh: '提示：那一天 🎄' }}
+        onCancel={() => setLock(false)}
+        onOk={() => {
+          setLock(false)
+          setHiddenView(true)
+          discover('hidden-chat')
+        }}
+      />
+    )
+
   return (
     <>
-      <KHead title={UI.chats} icons={['search', 'compose', 'gear']} />
-      <div className="k-scroll">
-        <div className="k-banner">
-          <b>{t({ ko: '🎂 오늘 생일인 친구를 확인해 보세요', zh: '🎂 看看今天生日的好友' })}</b>
-          <small>{t({ ko: '선물하기 · 광고', zh: '送禮 · 廣告' })}</small>
+      {hiddenView ? (
+        <div className="k-head k-head-sub">
+          <button className="k-back" onClick={() => setHiddenView(false)} aria-label="back">
+            <G n="back" size={24} w={2.2} />
+          </button>
+          <h1>{t({ ko: '숨긴 채팅방', zh: '隱藏的聊天室' })}</h1>
         </div>
-        {rooms.map((r) => {
+      ) : (
+        <KHead title={UI.chats} icons={['search', 'compose', 'gear']} onIcon={(n) => n === 'gear' && setMenu(true)} />
+      )}
+      <div className="k-scroll">
+        {hiddenView ? (
+          <p className="k-hidden-note">{t({ ko: '숨긴 채팅방은 채팅 목록과 알림에 표시되지 않습니다.', zh: '隱藏的聊天室不會顯示在聊天列表和通知中。' })}</p>
+        ) : (
+          <div className="k-banner">
+            <b>{t({ ko: '🎂 오늘 생일인 친구를 확인해 보세요', zh: '🎂 看看今天生日的好友' })}</b>
+            <small>{t({ ko: '선물하기 · 광고', zh: '送禮 · 廣告' })}</small>
+          </div>
+        )}
+        {list.map((r) => {
           const all: AnyMsg[] = [...r.messages, ...r.live]
           const last = all[all.length - 1]
           const unread = unreadByRoom[r.id] ?? 0
@@ -215,6 +258,7 @@ function ChatList() {
                 <b>
                   <span>{roomTitle(r, story.contacts, t)}</span>
                   {members > 0 && <em>{members}</em>}
+                  {r.hidden && <G n="lock" size={12} w={2} />}
                 </b>
                 <small>{preview(last, t)}</small>
               </span>
@@ -226,6 +270,27 @@ function ChatList() {
           )
         })}
       </div>
+      {menu && (
+        <div className="k-menu-bg" onClick={() => setMenu(false)}>
+          <div className="k-menu" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setMenu(false)}>{t({ ko: '편집', zh: '編輯' })}</button>
+            <button onClick={() => setMenu(false)}>{t({ ko: '모두 읽음', zh: '全部已讀' })}</button>
+            <button onClick={() => setMenu(false)}>{t({ ko: '채팅방 정렬', zh: '聊天室排序' })}</button>
+            {hasHidden && (
+              <button
+                onClick={() => {
+                  setMenu(false)
+                  if (found.includes('hidden-chat')) setHiddenView(true)
+                  else setLock(true)
+                }}
+              >
+                {t({ ko: '숨긴 채팅방', zh: '隱藏的聊天室' })}
+                <G n="lock" size={14} w={2} />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </>
   )
 }
