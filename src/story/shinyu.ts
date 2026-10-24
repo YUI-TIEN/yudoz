@@ -1,4 +1,5 @@
 import { kst, ms } from '../time'
+import { addSweet } from './shinyuSweet'
 import type { ChatMsg, PhoneStory } from './types'
 import { moreDohoon, moreCalendar, moreNotes, morePhotos, moreRooms, moreSearches, moreTriggers } from './shinyuMore'
 import { shinyuExtra } from './shinyuExtra'
@@ -602,3 +603,6 @@ shinyu.extra.hiddenPhotos.push(...moreSecretPhotos)
 shinyu.calendar.push(...moreSecretCal)
 shinyu.extra.x.posts['yu_diary'] = [...(shinyu.extra.x.posts['yu_diary'] ?? []), ...secretTweets].sort((a, b) => ms(b.at) - ms(a.at))
 shinyu.ai.push(...secretGpt)
+
+/* 앱 전체에 흩어진 달달한 디테일 */
+addSweet(shinyu)

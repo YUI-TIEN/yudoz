@@ -1,4 +1,5 @@
 import { kst, ms } from '../time'
+import { addSweet } from './dohoonSweet'
 import type { ChatMsg, PhoneStory } from './types'
 import { moreShinyu, moreCalendar, moreNotes, morePhotos, moreRooms, moreSearches, moreTriggers } from './dohoonMore'
 import { dohoonExtra } from './dohoonExtra'
@@ -491,3 +492,6 @@ dohoon.ai.push(...secretGpt)
   const k = dohoon.rooms.find((r) => r.id === 'kyungmin')
   if (k) k.messages = [...k.messages, ...moreKyungmin].sort(byTime)
 }
+
+/* 앱 전체에 흩어진 달달한 디테일 */
+addSweet(dohoon)
