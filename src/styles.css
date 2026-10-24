@@ -3508,7 +3508,12 @@ button.cell:active {
   border-radius: 6px;
 }
 .page-body:has(.vm-recorder) {
-  padding-bottom: 170px;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+}
+.page-body:has(.vm-recorder) > * {
+  flex: none;
 }
 
 /* =========================================================
@@ -6024,12 +6029,11 @@ button.cell:active {
   position: absolute;
 }
 
-/* 음성 녹음 */
+/* 음성 녹음: 목록이 길어도 화면 아래에 붙어 있다 */
 .vm-recorder {
-  position: absolute;
-  left: 0;
-  right: 0;
+  position: sticky;
   bottom: 0;
+  margin-top: auto !important;
   z-index: 5;
   display: flex;
   flex-direction: column;
@@ -6530,4 +6534,83 @@ button.cell:active {
 }
 .ph-lock > .statusbar {
   align-self: stretch;
+}
+
+/* IG 게시물 그리드 → 게시물 보기 */
+.ig-grid-item {
+  position: relative;
+  display: block;
+  padding: 0;
+}
+.ig-grid-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+.ig-grid-empty {
+  grid-column: 1 / -1;
+  padding: 40px 0;
+  text-align: center;
+  color: #8e8e93;
+}
+.ig-post-page-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.15;
+}
+.ig-post-page-title small {
+  font-size: 12px;
+  font-weight: 500;
+  color: #8e8e93;
+}
+
+/* IG DM: 시간 구분, 안 읽음, 요청 */
+.ig-bub-wrap {
+  display: flex;
+  flex-direction: column;
+}
+.ig-bub-wrap + .ig-bub-wrap {
+  margin-top: 2px;
+}
+.ig-bub.tail {
+  margin-bottom: 6px;
+}
+.ig-dm-time {
+  align-self: center;
+  margin: 14px 0 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #8e8e8e;
+}
+.ig-dm-tabs {
+  display: flex;
+  gap: 18px;
+  padding: 6px 16px 10px;
+}
+.ig-dm-tabs button {
+  font-size: 15px;
+  font-weight: 600;
+  color: #8e8e8e;
+}
+.ig-dm-tabs button.on {
+  color: #000;
+}
+.ig-dm-row.unread b,
+.ig-dm-row.unread small {
+  font-weight: 700;
+  color: #000;
+}
+.ig-dm-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #0095f6;
 }

@@ -1,4 +1,6 @@
 import { kst, ms } from '../time'
+import { ficNotes } from './shinyuFic'
+import { addIg } from './shinyuIg'
 import { addSweet } from './shinyuSweet'
 import type { ChatMsg, PhoneStory } from './types'
 import { moreDohoon, moreCalendar, moreNotes, morePhotos, moreRooms, moreSearches, moreTriggers } from './shinyuMore'
@@ -606,3 +608,5 @@ shinyu.ai.push(...secretGpt)
 
 /* 앱 전체에 흩어진 달달한 디테일 */
 addSweet(shinyu)
+addIg(shinyu)
+shinyu.notes.push(...ficNotes)

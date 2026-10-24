@@ -1,4 +1,6 @@
 import { kst, ms } from '../time'
+import { ficNotes } from './dohoonFic'
+import { addIg } from './dohoonIg'
 import { addSweet } from './dohoonSweet'
 import type { ChatMsg, PhoneStory } from './types'
 import { moreShinyu, moreCalendar, moreNotes, morePhotos, moreRooms, moreSearches, moreTriggers } from './dohoonMore'
@@ -495,3 +497,5 @@ dohoon.ai.push(...secretGpt)
 
 /* 앱 전체에 흩어진 달달한 디테일 */
 addSweet(dohoon)
+addIg(dohoon)
+dohoon.notes.push(...ficNotes)

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLang, type L } from '../../i18n'
-import { listDate, ms } from '../../time'
+import { listDate, ms, sameDay, time } from '../../time'
 import { useStory } from '../../story/engine'
 import type { IgPost, Pic, Tweet } from '../../story/types'
 import { useBackHandler, useDevice } from '../../device'
@@ -85,7 +85,7 @@ export function InstagramApp() {
               </button>
               <button onClick={() => setDm('list')} aria-label="direct" className="ig-dm-btn">
                 <G n="bubble" size={25} w={1.9} />
-                <i>{ig.dms.length}</i>
+                {ig.dms.some((d) => d.unread) && <i>{ig.dms.filter((d) => d.unread).length}</i>}
               </button>
             </span>
           </div>
@@ -304,8 +304,32 @@ function IgProfile({ handle, onBack, onHighlight }: { handle: string; onBack?: (
   const u = ig.users[handle]
   const isMe = handle === ig.me
   const [following, setFollowing] = useState(true)
-  useBackHandler(!!onBack, () => onBack?.())
-  const grid: Pic[] = isMe ? story.photos.map((p) => ({ emoji: p.emoji, tint: p.tint, src: p.src })) : ig.feed.filter((p) => p.by === handle).map((p) => p.pic)
+  const [openPost, setOpenPost] = useState<IgPost | null>(null)
+  const [viewUser, setViewUser] = useState<string | null>(null)
+  useBackHandler(!!onBack && !openPost, () => onBack?.())
+  useBackHandler(!!openPost && !viewUser, () => setOpenPost(null))
+  const posts = ig.feed.filter((p) => p.by === handle).sort((a, b) => ms(b.at) - ms(a.at))
+  const grid: Pic[] = posts.map((p) => p.pic)
+  if (viewUser && viewUser !== handle)
+    return <IgProfile handle={viewUser} onBack={() => setViewUser(null)} onHighlight={onHighlight} />
+  if (openPost)
+    return (
+      <div className="ig-scroll ig-post-page">
+        <div className="ig-prof-top">
+          <button onClick={() => setOpenPost(null)} aria-label="back">
+            <G n="back" size={26} w={2.2} />
+          </button>
+          <b className="ig-post-page-title">
+            <small>{handle}</small>
+            {t({ ko: '게시물', zh: '貼文' })}
+          </b>
+          <span />
+        </div>
+        {posts.slice(posts.indexOf(openPost)).map((p) => (
+          <IgPostView key={p.id} post={p} onUser={(h) => (h === handle ? setOpenPost(null) : setViewUser(h))} />
+        ))}
+      </div>
+    )
   return (
     <div className="ig-scroll">
       <div className="ig-prof-top">
@@ -385,8 +409,16 @@ function IgProfile({ handle, onBack, onHighlight }: { handle: string; onBack?: (
       </div>
       <div className="ig-grid">
         {grid.map((p, i) => (
-          <PhotoTile key={i} src={p.src} emoji={p.emoji} tint={p.tint} />
+          <button key={posts[i].id} className="ig-grid-item" onClick={() => setOpenPost(posts[i])} aria-label={`post ${i + 1}`}>
+            <PhotoTile src={p.src} emoji={p.emoji} tint={p.tint} />
+            {posts[i].comments.length > 0 && (
+              <span className="ig-grid-badge">
+                <G n="bubble" size={12} w={2} /> {posts[i].comments.length}
+              </span>
+            )}
+          </button>
         ))}
+        {grid.length === 0 && <p className="ig-grid-empty">{t({ ko: '게시물 없음', zh: '尚無貼文' })}</p>}
       </div>
     </div>
   )
@@ -395,7 +427,24 @@ function IgProfile({ handle, onBack, onHighlight }: { handle: string; onBack?: (
 function IgExplore() {
   const { story } = useStory()
   const { t } = useLang()
-  const pics: Pic[] = [...story.extra.instagram.feed.map((p) => p.pic), ...story.photos.map((p) => ({ emoji: p.emoji, tint: p.tint, src: p.src }))]
+  const feed = [...story.extra.instagram.feed].sort((a, b) => b.likes - a.likes)
+  const [open, setOpen] = useState<IgPost | null>(null)
+  const [user, setUser] = useState<string | null>(null)
+  useBackHandler(!!open && !user, () => setOpen(null))
+  if (user) return <IgProfile handle={user} onBack={() => setUser(null)} onHighlight={() => {}} />
+  if (open)
+    return (
+      <div className="ig-scroll ig-post-page">
+        <div className="ig-prof-top">
+          <button onClick={() => setOpen(null)} aria-label="back">
+            <G n="back" size={26} w={2.2} />
+          </button>
+          <b className="ig-post-page-title">{t({ ko: '탐색 탭', zh: '探索' })}</b>
+          <span />
+        </div>
+        <IgPostView post={open} onUser={setUser} />
+      </div>
+    )
   return (
     <>
       <div className="ig-search">
@@ -404,8 +453,10 @@ function IgExplore() {
       </div>
       <div className="ig-scroll">
         <div className="ig-grid explore">
-          {pics.map((p, i) => (
-            <PhotoTile key={i} src={p.src} emoji={p.emoji} tint={p.tint} />
+          {feed.map((p) => (
+            <button key={p.id} className="ig-grid-item" onClick={() => setOpen(p)}>
+              <PhotoTile src={p.pic.src} emoji={p.pic.emoji} tint={p.pic.tint} />
+            </button>
           ))}
         </div>
       </div>
@@ -473,7 +524,15 @@ function IgDms({ open, onOpen, onClose }: { open: string | null; onOpen: (h: str
     })
   }
   useBackHandler(true, () => (open ? onOpen('list') : onClose()))
+  const [readDm, setReadDm] = useState<string[]>([])
+  const [showReq, setShowReq] = useState(false)
+  const threadRef = useRef<HTMLDivElement>(null)
   const thread = ig.dms.find((d) => d.with === open)
+  useEffect(() => {
+    if (open) setReadDm((r) => (r.includes(open) ? r : [...r, open]))
+    const el = threadRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [open, sent, typingFor])
   if (thread) {
     const mine = sent[thread.with] ?? []
     return (
@@ -492,17 +551,24 @@ function IgDms({ open, onOpen, onClose }: { open: string | null; onOpen: (h: str
             <G n="video" size={25} />
           </span>
         </div>
-        <div className="ig-thread">
+        <div className="ig-thread" ref={threadRef}>
           <div className="ig-thread-intro">
             <Avatar size={90} radius={45} src={ig.users[thread.with]?.avatar} />
             <b>{t(ig.users[thread.with]?.name ?? thread.with)}</b>
             <small>{thread.with} · Instagram</small>
           </div>
-          {thread.messages.map((m, i) => (
-            <div key={i} className={`ig-bub ${m.from === ig.me ? 'me' : ''}`}>
-              {t(m.text)}
-            </div>
-          ))}
+          {thread.messages.map((m, i) => {
+            const prev = thread.messages[i - 1]
+            const gap = !prev || ms(m.at) - ms(prev.at) > 60 * 60 * 1000
+            const next = thread.messages[i + 1]
+            const tail = !next || next.from !== m.from || ms(next.at) - ms(m.at) > 60 * 60 * 1000
+            return (
+              <div key={i} className="ig-bub-wrap">
+                {gap && <small className="ig-dm-time">{sameDay(m.at, clock) ? time(m.at, lang) : `${listDate(m.at, clock, lang)} ${time(m.at, lang)}`}</small>}
+                <div className={`ig-bub ${m.from === ig.me ? 'me' : ''} ${tail ? 'tail' : ''}`}>{t(m.text)}</div>
+              </div>
+            )
+          })}
           {mine.map((m, i) => (
             <div key={`s${i}`} className={`ig-bub fade-in ${m.me ? 'me' : ''}`}>
               {t(m.text)}
@@ -552,22 +618,34 @@ function IgDms({ open, onOpen, onClose }: { open: string | null; onOpen: (h: str
         <span>{t({ ko: '검색', zh: '搜尋' })}</span>
       </div>
       <div className="ig-scroll">
-        <h4 className="ig-h4">{t({ ko: '메시지', zh: '訊息' })}</h4>
-        {ig.dms.map((d) => {
-          const last = d.messages[d.messages.length - 1]
-          return (
-            <button key={d.with} className="ig-dm-row" onClick={() => onOpen(d.with)}>
-              <Avatar size={56} radius={28} src={ig.users[d.with]?.avatar} />
-              <span>
-                <b>{t(ig.users[d.with]?.name ?? d.with)}</b>
-                <small>
-                  {t(last.text)} · {listDate(last.at, clock, lang)}
-                </small>
-              </span>
-              <G n="camera" size={22} />
-            </button>
-          )
-        })}
+        <div className="ig-dm-tabs">
+          <button className={showReq ? '' : 'on'} onClick={() => setShowReq(false)}>
+            {t({ ko: '메시지', zh: '訊息' })}
+          </button>
+          <button className={showReq ? 'on' : ''} onClick={() => setShowReq(true)}>
+            {t({ ko: `요청 (${ig.dms.filter((d) => d.request).length})`, zh: `訊息請求（${ig.dms.filter((d) => d.request).length}）` })}
+          </button>
+        </div>
+        {ig.dms
+          .filter((d) => !!d.request === showReq)
+          .sort((a, b) => ms(b.messages[b.messages.length - 1].at) - ms(a.messages[a.messages.length - 1].at))
+          .map((d) => {
+            const last = d.messages[d.messages.length - 1]
+            const unread = d.unread && !readDm.includes(d.with)
+            return (
+              <button key={d.with} className={`ig-dm-row ${unread ? 'unread' : ''}`} onClick={() => onOpen(d.with)}>
+                <Avatar size={56} radius={28} src={ig.users[d.with]?.avatar} />
+                <span>
+                  <b>{t(ig.users[d.with]?.name ?? d.with)}</b>
+                  <small>
+                    {last.from === ig.me ? t({ ko: '나: ', zh: '我：' }) : ''}
+                    {t(last.text)} · {listDate(last.at, clock, lang)}
+                  </small>
+                </span>
+                {unread ? <i className="ig-dm-dot" /> : <G n="camera" size={22} />}
+              </button>
+            )
+          })}
       </div>
     </div>
   )

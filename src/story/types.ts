@@ -123,7 +123,7 @@ export type Pic = { emoji: string; tint: string; src?: string }
 export type IgUser = { name: L; bio?: L; avatar?: string; posts: number; followers: string; following: string; verified?: boolean }
 export type IgPost = { id: string; by: string; pic: Pic; caption: L; likes: number; at: string; comments: { by: string; text: L }[] }
 export type IgStory = { by: string; frames: (Pic & { text?: L })[] }
-export type IgDm = { with: string; messages: { from: string; text: L; at: string }[] }
+export type IgDm = { with: string; messages: { from: string; text: L; at: string }[]; unread?: boolean; request?: boolean }
 export type Instagram = {
   me: string
   users: Record<string, IgUser>
