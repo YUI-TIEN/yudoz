@@ -1,4 +1,5 @@
 import type { AppId } from '../story/types'
+import { BRAND } from './brands'
 
 /* ---------------- SF Symbols 느낌의 선 아이콘 ---------------- */
 
@@ -386,12 +387,10 @@ export function AppIcon({ id, day, weekday }: { id: AppId | 'camera' | 'clock'; 
         </Squircle>
       )
     case 'kakao':
+      // 로고 경로의 사각형이 노란 바탕, 말풍선 구멍으로 갈색이 보이고 TALK 글자는 다시 노랑
       return (
-        <Squircle id="ig-kakao" bg={lin('ig-kakao', '#ffe812', '#fddc00')}>
-          <path fill="#3b1e1e" d="M30 14c-10.5 0-19 6.6-19 14.7 0 5.2 3.5 9.8 8.8 12.4l-2.2 8.1c-.2.7.6 1.2 1.2.8l9.6-6.3c.5 0 1.1.1 1.6.1 10.5 0 19-6.6 19-14.8S40.5 14 30 14z" />
-          <text x="30" y="32.6" textAnchor="middle" fontSize="9.2" fontWeight="800" fill="#ffe812" fontFamily="Arial, sans-serif" letterSpacing="-0.3">
-            TALK
-          </text>
+        <Squircle id="ig-kakao" bg={lin('ig-kakao', '#3c1e1e', '#3c1e1e')}>
+          <path d={BRAND.kakaotalk} fill="#fee500" transform="scale(2.5)" />
         </Squircle>
       )
     case 'photos': {
@@ -458,16 +457,16 @@ export function AppIcon({ id, day, weekday }: { id: AppId | 'camera' | 'clock'; 
       )
     case 'search':
       return (
-        <Squircle id="ig-naver" bg={lin('ig-naver', '#14d76a', '#03c75a')}>
-          <path fill="#fff" d="M18 17h8.4l7.4 11V17H42v26h-8.4L26.2 32v11H18z" />
+        <Squircle id="ig-naver" bg={lin('ig-naver', '#03c75a', '#03c75a')}>
+          <path d={BRAND.naver} fill="#fff" transform="translate(19 19) scale(0.92)" />
         </Squircle>
       )
     case 'ai':
       return (
-        <Squircle id="ig-gpt" bg={lin('ig-gpt', '#111', '#000')}>
-          <g transform="translate(30 30)" fill="none" stroke="#fff" strokeWidth="2.6">
+        <Squircle id="ig-gpt" bg={lin('ig-gpt', '#000', '#000')}>
+          <g transform="translate(30 30)" fill="none" stroke="#fff" strokeWidth="2.8" strokeLinejoin="round" strokeLinecap="round">
             {Array.from({ length: 6 }).map((_, i) => (
-              <rect key={i} x="-5.2" y="-15.5" width="10.4" height="19" rx="5.2" transform={`rotate(${i * 60}) translate(0 -1.5)`} />
+              <path key={i} d="M-6 -3.5 L-6 -10 A6 6 0 0 1 4.4 -14 L9.5 -11" transform={`rotate(${i * 60})`} />
             ))}
           </g>
         </Squircle>
@@ -497,21 +496,28 @@ export function AppIcon({ id, day, weekday }: { id: AppId | 'camera' | 'clock'; 
             </radialGradient>
           }
         >
-          <rect x="14" y="14" width="32" height="32" rx="9.5" fill="none" stroke="#fff" strokeWidth="3.6" />
-          <circle cx="30" cy="30" r="7.6" fill="none" stroke="#fff" strokeWidth="3.6" />
-          <circle cx="39.6" cy="20.4" r="2.2" fill="#fff" />
+          <path d={BRAND.instagram} fill="#fff" transform="translate(13.5 13.5) scale(1.375)" />
         </Squircle>
       )
     case 'x':
       return (
         <Squircle id="ig-x" bg={lin('ig-x', '#000', '#000')}>
-          <path fill="#fff" d="M38.2 15h4.9L32.4 27.2 45 45h-9.8l-7.7-10.1L18.7 45h-4.9l11.4-13.1L13 15h10l7 9.2zm-1.7 27.1h2.7L21.7 17.8h-2.9z" />
+          <path d={BRAND.x} fill="#fff" transform="translate(16 16) scale(1.1667)" />
         </Squircle>
       )
     case 'music':
+      // 사각형은 빨간 그라데이션, 음표 구멍으로 흰 바탕이 보인다
       return (
-        <Squircle id="ig-music" bg={lin('ig-music', '#ff5e73', '#fa233b')}>
-          <path fill="#fff" d="M38.5 13.5v20.2a6 6 0 1 1-3-5.2V20.6l-11 2.6v14.6a6 6 0 1 1-3-5.2V18.2z" />
+        <Squircle
+          id="ig-music"
+          bg={
+            <>
+              {lin('ig-music', '#fff', '#fff')}
+              {lin('ig-music-fg', '#fb5c74', '#fa233b')}
+            </>
+          }
+        >
+          <path d={BRAND.applemusic} fill="url(#ig-music-fg)" transform="scale(2.5)" />
         </Squircle>
       )
     case 'maps':
