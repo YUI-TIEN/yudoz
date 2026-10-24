@@ -170,6 +170,10 @@ export const shinyuExtra: Extras = {
         },
       ],
       yu_diary: [
+        { id: 'd5', by: 'yu_diary', text: { ko: '전복죽 24시간 하는 데 찾느라 30분 걸림. 말 안 할 거임', zh: '為了找 24 小時的鮑魚粥花了三十分鐘。不會告訴他' }, at: kst('2025-10-20 00:10'), likes: 0, rts: 0, replies: 0 },
+        { id: 'd6', by: 'yu_diary', text: { ko: '1위. 이름 불렸을 때 도훈이가 제일 먼저 손 잡았다', zh: '一位。被叫到名字時道勳第一個抓住我的手' }, at: kst('2025-11-13 23:50'), likes: 0, rts: 0, replies: 0 },
+        { id: 'd7', by: 'yu_diary', text: { ko: '목도리 따뜻함. 양말 준 거 조금 미안해짐', zh: '圍巾很暖。開始對送襪子這件事有點抱歉' }, at: kst('2025-12-25 00:10'), likes: 0, rts: 0, replies: 0 },
+        { id: 'd8', by: 'yu_diary', text: { ko: '새벽 3시 핫초코. 편지 쓰다 들킬 뻔', zh: '凌晨三點的熱可可。寫信差點被發現' }, at: kst('2026-01-15 03:30'), likes: 0, rts: 0, replies: 0 },
         {
           id: 'd1',
           by: 'yu_diary',

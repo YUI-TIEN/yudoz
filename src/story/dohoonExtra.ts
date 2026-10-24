@@ -139,6 +139,10 @@ export const dohoonExtra: Extras = {
         },
       ],
       wolf_note: [
+        { id: 'd4', by: 'wolf_note', text: { ko: '3분 늦었다. 내년엔 무조건 1등', zh: '晚了三分鐘。明年一定要第一個' }, at: kst('2025-11-07 00:10'), likes: 0, rts: 0, replies: 0 },
+        { id: 'd5', by: 'wolf_note', text: { ko: '형 목소리 없는 날. 내가 형 몫까지 말함. 생각보다 힘들다 형은 맨날 이걸 했구나', zh: '哥沒有聲音的一天。我把哥的份也說了。比想像中累，原來哥每天都在做這種事' }, at: kst('2026-05-20 23:00'), likes: 0, rts: 0, replies: 0 },
+        { id: 'd6', by: 'wolf_note', text: { ko: '벽 너머 똑똑. 이게 뭐라고 좋냐', zh: '牆的另一邊叩叩。這有什麼好開心的' }, at: kst('2026-06-13 23:20'), likes: 0, rts: 0, replies: 0 },
+        { id: 'd7', by: 'wolf_note', text: { ko: '형 멋있는거 폴더 14장째. 형한테는 비밀', zh: '「哥帥的」資料夾第 14 張。對哥保密' }, at: kst('2026-08-04 18:10'), likes: 0, rts: 0, replies: 0 },
         {
           id: 'd1',
           by: 'wolf_note',

@@ -1,5 +1,6 @@
-import { kst } from '../time'
+import { kst, ms } from '../time'
 import type { ChatMsg, PhoneStory } from './types'
+import { moreDohoon, moreCalendar, moreNotes, morePhotos, moreRooms, moreSearches, moreTriggers } from './shinyuMore'
 import { shinyuExtra } from './shinyuExtra'
 import { shinyuGpt } from './gpt'
 
@@ -568,3 +569,14 @@ export const shinyu: PhoneStory = {
     },
   ],
 }
+
+/* 추가 에피소드 합치기 (시간순 정렬, 같은 시각은 원래 순서 유지) */
+const byTime = (a: ChatMsg, b: ChatMsg) => ms(a.at) - ms(b.at)
+const mainRoom = shinyu.rooms.find((r) => r.id === 'dohoon')!
+mainRoom.messages = [...moreDohoon, ...mainRoom.messages].sort(byTime)
+shinyu.rooms.push(...moreRooms)
+shinyu.notes.push(...moreNotes)
+shinyu.photos.push(...morePhotos)
+shinyu.searches.push(...moreSearches)
+shinyu.calendar.push(...moreCalendar)
+shinyu.script.push(...moreTriggers)

@@ -1,5 +1,6 @@
-import { kst } from '../time'
+import { kst, ms } from '../time'
 import type { ChatMsg, PhoneStory } from './types'
+import { moreShinyu, moreCalendar, moreNotes, morePhotos, moreRooms, moreSearches, moreTriggers } from './dohoonMore'
 import { dohoonExtra } from './dohoonExtra'
 import { dohoonGpt } from './gpt'
 
@@ -453,3 +454,14 @@ export const dohoon: PhoneStory = {
     },
   ],
 }
+
+/* 추가 에피소드 합치기 (시간순 정렬, 같은 시각은 원래 순서 유지) */
+const byTime = (a: ChatMsg, b: ChatMsg) => ms(a.at) - ms(b.at)
+const mainRoom = dohoon.rooms.find((r) => r.id === 'shinyu')!
+mainRoom.messages = [...moreShinyu, ...mainRoom.messages].sort(byTime)
+dohoon.rooms.push(...moreRooms)
+dohoon.notes.push(...moreNotes)
+dohoon.photos.push(...morePhotos)
+dohoon.searches.push(...moreSearches)
+dohoon.calendar.push(...moreCalendar)
+dohoon.script.push(...moreTriggers)
