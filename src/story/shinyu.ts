@@ -1,4 +1,6 @@
 import { kst, ms } from '../time'
+import { applyTracesShinyu } from './abo/traces'
+import { applyTraineeShinyu } from './abo/trainee'
 import { applyAbo } from './abo/shinyu'
 import { ficNotes } from './shinyuFic'
 import { addIg } from './shinyuIg'
@@ -614,3 +616,5 @@ shinyu.notes.push(...ficNotes)
 
 /* ABO 세계선 (도훈 오메가 · 신유 알파) */
 applyAbo(shinyu)
+applyTraineeShinyu(shinyu)
+applyTracesShinyu(shinyu)

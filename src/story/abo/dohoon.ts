@@ -1,7 +1,6 @@
 import { kst, ms } from '../../time'
 import type { L } from '../../i18n'
 import type { Action, ChatMsg, PhoneStory, ReplyBranch, Trigger } from '../types'
-import { ficNotes } from './fic'
 
 /**
  * 도훈 폰 ABO 세계선 (팬메이드 허구).
@@ -22,10 +21,9 @@ export function applyAbo(s: PhoneStory) {
   s.lockNotices.push({ app: 'calendar', icon: '📅', title: x('캘린더', '行事曆'), body: x('🌧 형 러트 예정 (11/5~11/9) · 생일이랑 겹침', '🌧 哥易感期預計（11/5～11/9）・跟生日撞到'), time: x('어제', '昨天') })
 
   /* ---------- 메모 ---------- */
-  // 첫 만남·고백 장면이 ABO 설정과 다른 장은 공유 메모 「복숭아 탄산」으로 대체
+  // 첫 만남·고백 장면이 ABO 설정과 다른 소설 메모는 뺀다
   s.notes = s.notes.filter((n) => !['fic-d0', 'fic-d1', 'fic-d3'].includes(n.id))
   s.notes.push(
-    ...ficNotes(),
     {
       id: 'abo-heat-log',
       title: x('히트 기록 (형이랑)', '發情期紀錄（和哥）'),
@@ -103,8 +101,6 @@ export function applyAbo(s: PhoneStory) {
       ),
     },
   )
-  const idx = s.notes.find((n) => n.id === 'abo-fic-0')
-  if (idx) idx.pinned = true
 
   /* ---------- 숨긴 채팅방 🩵 ---------- */
   const sky = s.rooms.find((r) => r.id === S)

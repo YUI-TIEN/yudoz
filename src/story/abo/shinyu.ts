@@ -1,7 +1,6 @@
 import { kst, ms } from '../../time'
 import type { L } from '../../i18n'
 import type { Action, ChatMsg, PhoneStory, ReplyBranch, Trigger } from '../types'
-import { ficNotes } from './fic'
 
 /**
  * 신유 폰 ABO 세계선 (팬메이드 허구).
@@ -24,7 +23,7 @@ export function applyAbo(s: PhoneStory) {
 
   /* ---------- 메모: 고백 장면이 다른 기존 소설은 ABO 버전으로 교체 ---------- */
   s.notes = s.notes.filter((n) => !n.id.startsWith('fic-s') && n.id !== 'novel')
-  s.notes.push(...ficNotes(), {
+  s.notes.push({
     id: 'abo-log',
     title: x('도훈이 주기 메모 (절대 보지 말 것)', '道勳週期備忘（絕對不准看）'),
     at: kst('2026-01-28 23:40'),

@@ -1,4 +1,6 @@
 import { kst, ms } from '../time'
+import { applyTracesDohoon } from './abo/traces'
+import { applyTraineeDohoon } from './abo/trainee'
 import { applyAbo } from './abo/dohoon'
 import { ficNotes } from './dohoonFic'
 import { addIg } from './dohoonIg'
@@ -503,3 +505,5 @@ dohoon.notes.push(...ficNotes)
 
 /* ABO 세계선 (도훈 오메가 · 신유 알파) */
 applyAbo(dohoon)
+applyTraineeDohoon(dohoon)
+applyTracesDohoon(dohoon)
