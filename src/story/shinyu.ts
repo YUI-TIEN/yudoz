@@ -1,8 +1,9 @@
 import { kst, ms } from '../time'
+import { applyMediaShinyu } from './abo/media'
+import { applyDramaShinyu } from './abo/drama'
 import { applyTracesShinyu } from './abo/traces'
 import { applyTraineeShinyu } from './abo/trainee'
 import { applyAbo } from './abo/shinyu'
-import { ficNotes } from './shinyuFic'
 import { addIg } from './shinyuIg'
 import { addSweet } from './shinyuSweet'
 import type { ChatMsg, PhoneStory } from './types'
@@ -612,9 +613,10 @@ shinyu.ai.push(...secretGpt)
 /* 앱 전체에 흩어진 달달한 디테일 */
 addSweet(shinyu)
 addIg(shinyu)
-shinyu.notes.push(...ficNotes)
 
 /* ABO 세계선 (도훈 오메가 · 신유 알파) */
 applyAbo(shinyu)
 applyTraineeShinyu(shinyu)
 applyTracesShinyu(shinyu)
+applyDramaShinyu(shinyu)
+applyMediaShinyu(shinyu)

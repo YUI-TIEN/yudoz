@@ -1,8 +1,9 @@
 import { kst, ms } from '../time'
+import { applyMediaDohoon } from './abo/media'
+import { applyDramaDohoon } from './abo/drama'
 import { applyTracesDohoon } from './abo/traces'
 import { applyTraineeDohoon } from './abo/trainee'
 import { applyAbo } from './abo/dohoon'
-import { ficNotes } from './dohoonFic'
 import { addIg } from './dohoonIg'
 import { addSweet } from './dohoonSweet'
 import type { ChatMsg, PhoneStory } from './types'
@@ -10,7 +11,7 @@ import { moreShinyu, moreCalendar, moreNotes, morePhotos, moreRooms, moreSearche
 import { dohoonExtra } from './dohoonExtra'
 import { dohoonGpt } from './gpt'
 import { secretCalendar, secretContact, secretNotes, secretPhotos, secretPlaylist, secretRoom, secretTriggers } from './dohoonSecret'
-import { moreSecretCal, moreSecretPhotos, moreSky, moreKyungmin, novelNotes, secretGpt, secretTweets } from './dohoonSecret2'
+import { moreSecretCal, moreSecretPhotos, moreSky, moreKyungmin, secretGpt, secretTweets } from './dohoonSecret2'
 
 /** [시각, 보낸 사람, 한국어, 중국어] */
 type Row = [string, string, string, string]
@@ -488,7 +489,6 @@ dohoon.script.push(...moreTriggers)
 
 /* 비밀연애 2부: 숨긴 채팅방 추가분, 연재 소설, 사진, 비밀 계정 글, ChatGPT */
 secretRoom.messages = [...secretRoom.messages, ...moreSky].sort(byTime)
-dohoon.notes.push(...novelNotes)
 dohoon.extra.hiddenPhotos.push(...moreSecretPhotos)
 dohoon.calendar.push(...moreSecretCal)
 dohoon.extra.x.posts['wolf_note'] = [...(dohoon.extra.x.posts['wolf_note'] ?? []), ...secretTweets].sort((a, b) => ms(b.at) - ms(a.at))
@@ -501,9 +501,10 @@ dohoon.ai.push(...secretGpt)
 /* 앱 전체에 흩어진 달달한 디테일 */
 addSweet(dohoon)
 addIg(dohoon)
-dohoon.notes.push(...ficNotes)
 
 /* ABO 세계선 (도훈 오메가 · 신유 알파) */
 applyAbo(dohoon)
 applyTraineeDohoon(dohoon)
 applyTracesDohoon(dohoon)
+applyDramaDohoon(dohoon)
+applyMediaDohoon(dohoon)

@@ -3575,7 +3575,8 @@ button.cell:active {
   text-align: center;
   border-bottom: 8px solid #f3f4f6;
 }
-.nv-shortcuts span {
+.nv-shortcuts span,
+.nv-shortcuts button {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -6613,4 +6614,10 @@ button.cell:active {
   height: 9px;
   border-radius: 50%;
   background: #0095f6;
+}
+.nv-shortcuts button i {
+  display: block;
+}
+.nv-card.news .nv-src {
+  background: #3d7bf5;
 }

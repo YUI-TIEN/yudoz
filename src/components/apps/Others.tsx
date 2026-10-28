@@ -6,6 +6,7 @@ import { useBackHandler, useDevice } from '../../device'
 import { Page } from '../common'
 import { StatusBar, WD, kstParts } from '../system'
 import { G } from '../icons'
+import type { SearchResult } from '../../story/types'
 
 /* ---------------- 메모 ---------------- */
 export function NotesApp() {
@@ -548,13 +549,31 @@ function Recorder({ onSaved }: { onSaved: (r: Rec) => void }) {
 }
 
 /* ---------------- 검색 (네이버) ---------------- */
+function NvCard({ r }: { r: SearchResult }) {
+  const { t, lang } = useLang()
+  return (
+    <div className={`nv-card ${r.press ? 'news' : ''}`}>
+      <small>
+        <span className="nv-src" /> {r.press ? `${r.press}${r.at ? ' · ' + fullDate(r.at, lang) : ''}` : 'blog.naver.com'}
+      </small>
+      <b>{t(r.title)}</b>
+      <p>{t(r.body)}</p>
+    </div>
+  )
+}
+
 export function SearchApp() {
   const { story } = useStory()
   const { t } = useLang()
   const [q, setQ] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   const [focus, setFocus] = useState(false)
-  useBackHandler(q !== null, () => setQ(null))
+  const [news, setNews] = useState(false)
+  useBackHandler(q !== null || news, () => (news && q === null ? setNews(false) : setQ(null)))
+  const allNews = story.searches
+    .flatMap((s) => s.result.filter((r) => r.press))
+    .filter((r, i, list) => list.findIndex((o) => t(o.title) === t(r.title)) === i)
+    .sort((a, b) => ms(b.at ?? '') - ms(a.at ?? ''))
   const hit = q !== null ? story.searches.find((s) => t(s.q) === q || t(s.q).includes(q) || q.includes(t(s.q))) : null
   const go = (text: string) => {
     setQ(text)
@@ -592,15 +611,7 @@ export function SearchApp() {
             ))}
           </div>
           {hit ? (
-            hit.result.map((r, i) => (
-              <div key={i} className="nv-card">
-                <small>
-                  <span className="nv-src" /> blog.naver.com
-                </small>
-                <b>{t(r.title)}</b>
-                <p>{t(r.body)}</p>
-              </div>
-            ))
+            hit.result.map((r, i) => <NvCard key={i} r={r} />)
           ) : (
             <div className="nv-card">
               <b>{t({ ko: `'${q}'에 대한 검색결과가 없습니다.`, zh: `找不到「${q}」的搜尋結果。` })}</b>
@@ -609,15 +620,26 @@ export function SearchApp() {
           )}
           <p className="muted center">{t({ ko: '검색 결과는 가상의 내용입니다.', zh: '搜尋結果為虛構內容。' })}</p>
         </div>
+      ) : news ? (
+        <div className="nv-results">
+          <div className="nv-tabs">
+            <span className="on">{t({ ko: '뉴스', zh: '新聞' })}</span>
+            <span>{t({ ko: '연예', zh: '娛樂' })}</span>
+            <span>{t({ ko: '많이 본', zh: '熱門' })}</span>
+          </div>
+          {allNews.map((r, i) => (
+            <NvCard key={i} r={r} />
+          ))}
+        </div>
       ) : (
         <div className="nv-home">
           {!focus && (
             <div className="nv-shortcuts">
               {['메일', '카페', '블로그', '쇼핑', '뉴스', '지도'].map((x, i) => (
-                <span key={x}>
+                <button key={x} onClick={() => x === '뉴스' && setNews(true)}>
                   <i style={{ background: ['#03c75a', '#4fc76b', '#2db400', '#ff5a5a', '#3d7bf5', '#26b6c7'][i] }} />
                   {x}
-                </span>
+                </button>
               ))}
             </div>
           )}
