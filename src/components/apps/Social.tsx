@@ -509,7 +509,7 @@ function IgDms({ open, onOpen, onClose }: { open: string | null; onOpen: (h: str
   const [draft, setDraft] = useState('')
   const count = useRef<Record<string, number>>({})
   const reply = (handle: string, text: string) => {
-    const persona = PEOPLE[story.id]?.[IG_TO_CONTACT[handle] ?? '']
+    const persona = PEOPLE[story.key ?? story.id]?.[IG_TO_CONTACT[handle] ?? '']
     if (!persona) return
     const n = count.current[handle] ?? 0
     count.current[handle] = n + 1

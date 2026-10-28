@@ -1,4 +1,5 @@
 import { kst, ms } from '../time'
+import { applyAbo } from './abo/shinyu'
 import { ficNotes } from './shinyuFic'
 import { addIg } from './shinyuIg'
 import { addSweet } from './shinyuSweet'
@@ -610,3 +611,6 @@ shinyu.ai.push(...secretGpt)
 addSweet(shinyu)
 addIg(shinyu)
 shinyu.notes.push(...ficNotes)
+
+/* ABO 세계선 (도훈 오메가 · 신유 알파) */
+applyAbo(shinyu)

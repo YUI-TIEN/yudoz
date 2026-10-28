@@ -41,7 +41,7 @@ function initial(story: PhoneStory): Progress {
 
 function load(story: PhoneStory): Progress {
   try {
-    const raw = window.sessionStorage.getItem(`yudoz-${story.id}-v1`)
+    const raw = window.sessionStorage.getItem(`yudoz-${story.key ?? story.id}-v1`)
     if (raw) return { ...initial(story), ...(JSON.parse(raw) as Progress) }
   } catch {
     // 무시
@@ -127,11 +127,11 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
 
   useEffect(() => {
     try {
-      window.sessionStorage.setItem(`yudoz-${story.id}-v1`, JSON.stringify(progress))
+      window.sessionStorage.setItem(`yudoz-${story.key ?? story.id}-v1`, JSON.stringify(progress))
     } catch {
       // 무시
     }
-  }, [progress, story.id])
+  }, [progress, story.key, story.id])
 
   useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), [])
 
@@ -324,7 +324,7 @@ export function StoryProvider({ story, children }: { story: PhoneStory; children
   const freeReply = (room: string, lastKind: 'text' | 'sticker' | 'photo', lastText: string) => {
     const roomDef = story.rooms.find((x) => x.id === room)
     if (!roomDef || scriptBusy(room)) return
-    const people = PEOPLE[story.id] ?? {}
+    const people = PEOPLE[story.key ?? story.id] ?? {}
     // 1:1이면 상대, 단톡이면 한두 명
     const candidates = roomDef.contactId ? [roomDef.contactId] : (roomDef.group?.members ?? [])
     const p0 = ref.current

@@ -20,7 +20,7 @@ export function NotesApp() {
   const tint = '#e5a800'
   const locked = story.extra.lockedNote
   const unlocked = found.includes('locked-note')
-  const [mine, setMine] = useMyNotes(story.id)
+  const [mine, setMine] = useMyNotes(story.key ?? story.id)
   const editing = mine.find((n) => n.id === open)
 
   if (editing)

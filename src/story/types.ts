@@ -92,6 +92,10 @@ export type Trigger = {
 
 export type PhoneStory = {
   id: 'shinyu' | 'dohoon'
+  /** 저장·인물 설정 키 (세계선별로 다름, 없으면 id) */
+  key?: string
+  /** 세계선 표시 (ABO 등) */
+  world?: 'abo'
   owner: { name: L; device: L; avatar?: string; status: L }
   accent: string
   wallpaper: string

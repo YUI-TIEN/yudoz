@@ -1,4 +1,5 @@
 import { kst, ms } from '../time'
+import { applyAbo } from './abo/dohoon'
 import { ficNotes } from './dohoonFic'
 import { addIg } from './dohoonIg'
 import { addSweet } from './dohoonSweet'
@@ -499,3 +500,6 @@ dohoon.ai.push(...secretGpt)
 addSweet(dohoon)
 addIg(dohoon)
 dohoon.notes.push(...ficNotes)
+
+/* ABO 세계선 (도훈 오메가 · 신유 알파) */
+applyAbo(dohoon)
